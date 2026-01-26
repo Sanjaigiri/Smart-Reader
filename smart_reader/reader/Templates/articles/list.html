@@ -1,0 +1,860 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Browse Articles{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .page-header-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .page-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-header p {
+        opacity: 0.9;
+    }
+    
+    /* Active Filters Display */
+    .active-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .active-filters-label {
+        font-size: 0.85rem;
+        opacity: 0.8;
+        margin-right: 0.5rem;
+    }
+    
+    .active-filter-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50px;
+        font-size: 0.8rem;
+        color: white;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .active-filter-badge:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(1.02);
+    }
+    
+    .active-filter-badge .fa-times {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        margin-left: 0.25rem;
+    }
+    
+    .active-filter-badge:hover .fa-times {
+        opacity: 1;
+    }
+    
+    .clear-all-filters {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.35rem 0.75rem;
+        background: rgba(239, 68, 68, 0.3);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: 50px;
+        font-size: 0.8rem;
+        color: white;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .clear-all-filters:hover {
+        background: rgba(239, 68, 68, 0.5);
+    }
+    
+    .articles-page {
+        padding: 2rem;
+    }
+    
+    .articles-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+    }
+    
+    /* Sidebar Filters */
+    .sidebar {
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+    }
+    
+    .filter-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 0.875rem;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }
+    
+    .filter-item:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+    
+    .filter-item.active {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+    }
+    
+    .filter-item .count {
+        margin-left: auto;
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        background: var(--bg-tertiary);
+        border-radius: 50px;
+    }
+    
+    /* Search Bar */
+    .search-bar {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .search-bar input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        font-size: 1rem;
+        color: var(--text-primary);
+        outline: none;
+    }
+    
+    .search-bar i {
+        color: var(--text-muted);
+    }
+    
+    /* Sort Dropdown */
+    .sort-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+    
+    .results-count {
+        color: var(--text-secondary);
+    }
+    
+    .sort-select {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+    
+    /* Articles Grid */
+    .articles-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .article-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        overflow: hidden;
+        transition: all 0.3s;
+    }
+    
+    .article-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .article-img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .article-img i {
+        font-size: 2.5rem;
+        color: white;
+    }
+    
+    .bookmark-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow);
+        transition: all 0.2s;
+    }
+    
+    .bookmark-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .bookmark-btn.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .article-body {
+        padding: 1.5rem;
+    }
+    
+    .article-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .article-category {
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+    }
+    
+    .article-time {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .article-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+    
+    .article-title a {
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: color 0.2s;
+    }
+    
+    .article-title a:hover {
+        color: var(--primary);
+    }
+    
+    .article-summary {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+    
+    .article-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .article-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+    }
+    
+    .article-stats span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .progress-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .progress-badge.not-started {
+        background: var(--bg-tertiary);
+        color: var(--text-muted);
+    }
+    
+    .progress-badge.in-progress {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+    
+    .progress-badge.completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+    }
+    
+    /* Difficulty badges */
+    .badge-beginner { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .badge-intermediate { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .badge-advanced { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+    }
+    
+    .pagination a,
+    .pagination span {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text-secondary);
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+    
+    .pagination a:hover {
+        background: var(--bg-tertiary);
+    }
+    
+    .pagination .current {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state p {
+        color: var(--text-secondary);
+    }
+    
+    @media (max-width: 1024px) {
+        .articles-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .sidebar {
+            position: static;
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+        }
+        
+        .filter-card {
+            min-width: 200px;
+            margin-bottom: 0;
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .articles-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    /* ========================================
+       MODERN TAGS - MARQUEE + GRID
+       ======================================== */
+    
+    .tags-filter-card {
+        overflow: hidden;
+    }
+    
+    /* Marquee Container */
+    .tags-marquee-wrapper {
+        position: relative;
+        overflow: hidden;
+        margin: -0.5rem -1.5rem;
+        padding: 0.75rem 0;
+        mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+    }
+    
+    .tags-marquee {
+        overflow: hidden;
+    }
+    
+    .tags-marquee-content {
+        display: flex;
+        gap: 0.75rem;
+        animation: marqueeScroll 40s linear infinite;  /* Slowed from 20s to 40s */
+        width: max-content;
+    }
+    
+    .tags-marquee-wrapper:hover .tags-marquee-content {
+        animation-play-state: paused;
+    }
+    
+    .marquee-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        color: var(--text-secondary);
+        background: var(--bg-tertiary);
+        border-radius: 50px;
+        white-space: nowrap;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+    
+    .marquee-tag .tag-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--text-muted);
+        transition: all 0.3s ease;
+    }
+    
+    .marquee-tag:hover {
+        color: var(--text-primary);
+        background: var(--bg-secondary);
+        border-color: var(--border);
+        transform: scale(1.05);
+    }
+    
+    .marquee-tag:hover .tag-dot {
+        background: var(--text-secondary);
+    }
+    
+    .marquee-tag.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    .marquee-tag.active .tag-dot {
+        background: white;
+    }
+    
+    @keyframes marqueeScroll {
+        0% {
+            transform: translateX(0);
+        }
+        100% {
+            transform: translateX(-50%);
+        }
+    }
+    
+    /* Grid Tags */
+    .tags-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .grid-tag {
+        position: relative;
+        padding: 0.4rem 0.9rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        color: var(--text-secondary);
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+    
+    .grid-tag::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(128, 128, 128, 0.1), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .grid-tag:hover {
+        color: var(--text-primary);
+        border-color: var(--text-muted);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .grid-tag:hover::before {
+        left: 100%;
+    }
+    
+    .grid-tag.active {
+        background: linear-gradient(135deg, var(--primary), #8b5cf6);
+        color: white;
+        border-color: transparent;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-content">
+        <h1>📖 Explore Articles</h1>
+        <p>Discover articles that match your interests and start reading</p>
+        
+        <!-- Active Filters Display -->
+        {% if current_category or current_tag or current_difficulty or search_query %}
+        <div class="active-filters">
+            <span class="active-filters-label">Active Filters:</span>
+            {% if search_query %}
+            <a href="?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_tag %}tag={{ current_tag }}&{% endif %}{% if current_difficulty %}difficulty={{ current_difficulty }}{% endif %}" class="active-filter-badge">
+                <i class="fas fa-search"></i> "{{ search_query }}"
+                <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+            {% if current_category %}
+            <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if current_tag %}tag={{ current_tag }}&{% endif %}{% if current_difficulty %}difficulty={{ current_difficulty }}{% endif %}" class="active-filter-badge">
+                <i class="fas fa-folder"></i> {{ current_category|title }}
+                <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+            {% if current_tag %}
+            <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if current_category %}category={{ current_category }}&{% endif %}{% if current_difficulty %}difficulty={{ current_difficulty }}{% endif %}" class="active-filter-badge">
+                <i class="fas fa-tag"></i> {{ current_tag|title }}
+                <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+            {% if current_difficulty %}
+            <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if current_category %}category={{ current_category }}&{% endif %}{% if current_tag %}tag={{ current_tag }}{% endif %}" class="active-filter-badge">
+                <i class="fas fa-signal"></i> {{ current_difficulty|title }}
+                <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+            <a href="{% url 'articles' %}" class="clear-all-filters">
+                <i class="fas fa-times-circle"></i> Clear All
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="articles-page">
+    <div class="articles-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Categories Filter -->
+            <div class="filter-card">
+                <h3 class="filter-title"><i class="fas fa-folder"></i> Categories</h3>
+                <div class="filter-list">
+                    <a href="?{% if current_tag %}tag={{ current_tag }}&{% endif %}{% if current_difficulty %}difficulty={{ current_difficulty }}{% endif %}" class="filter-item {% if not current_category %}active{% endif %}">
+                        <i class="fas fa-border-all"></i> All Categories
+                    </a>
+                    {% for category in categories %}
+                    <a href="?category={{ category.slug }}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if current_difficulty %}&difficulty={{ current_difficulty }}{% endif %}" class="filter-item {% if current_category == category.slug %}active{% endif %}">
+                        <i class="fas {{ category.icon|default:'fa-folder' }}"></i> {{ category.name }}
+                        <span class="count">{{ category.article_count }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Difficulty Filter -->
+            <div class="filter-card">
+                <h3 class="filter-title"><i class="fas fa-signal"></i> Difficulty</h3>
+                <div class="filter-list">
+                    <a href="?{% if current_category %}category={{ current_category }}&{% endif %}{% if current_tag %}tag={{ current_tag }}{% endif %}" class="filter-item {% if not current_difficulty %}active{% endif %}">
+                        All Levels
+                    </a>
+                    <a href="?difficulty=beginner{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="filter-item {% if current_difficulty == 'beginner' %}active{% endif %}">
+                        <span style="color: var(--success);">●</span> Beginner
+                    </a>
+                    <a href="?difficulty=intermediate{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="filter-item {% if current_difficulty == 'intermediate' %}active{% endif %}">
+                        <span style="color: var(--warning);">●</span> Intermediate
+                    </a>
+                    <a href="?difficulty=advanced{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="filter-item {% if current_difficulty == 'advanced' %}active{% endif %}">
+                        <span style="color: var(--danger);">●</span> Advanced
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Tags -->
+            {% if tags %}
+            <div class="filter-card tags-filter-card">
+                <h3 class="filter-title"><i class="fas fa-tags"></i> Tags</h3>
+                <div class="tags-marquee-wrapper">
+                    <div class="tags-marquee">
+                        <div class="tags-marquee-content">
+                            {% for tag in tags %}
+                            <a href="?tag={{ tag.slug }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_difficulty %}&difficulty={{ current_difficulty }}{% endif %}" class="marquee-tag {% if current_tag == tag.slug %}active{% endif %}">
+                                <span class="tag-dot"></span>
+                                {{ tag.name }}
+                            </a>
+                            {% endfor %}
+                            {% for tag in tags %}
+                            <a href="?tag={{ tag.slug }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_difficulty %}&difficulty={{ current_difficulty }}{% endif %}" class="marquee-tag {% if current_tag == tag.slug %}active{% endif %}" aria-hidden="true">
+                                <span class="tag-dot"></span>
+                                {{ tag.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="tags-grid">
+                    {% for tag in tags %}
+                    <a href="?tag={{ tag.slug }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_difficulty %}&difficulty={{ current_difficulty }}{% endif %}" class="grid-tag {% if current_tag == tag.slug %}active{% endif %}">
+                        {{ tag.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </aside>
+        
+        <!-- Main Content -->
+        <main>
+            <!-- Search -->
+            <form method="GET" class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" name="q" placeholder="Search articles..." value="{{ search_query|default:'' }}">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+            
+            <!-- Sort Bar -->
+            <div class="sort-bar">
+                <span class="results-count">
+                    {{ articles.paginator.count }} article{{ articles.paginator.count|pluralize }} found
+                </span>
+                <select class="sort-select" onchange="window.location.href='?sort='+this.value">
+                    <option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                    <option value="created_at" {% if current_sort == 'created_at' %}selected{% endif %}>Oldest First</option>
+                    <option value="popular" {% if current_sort == 'popular' %}selected{% endif %}>Most Popular</option>
+                    <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>Highest Rated</option>
+                </select>
+            </div>
+            
+            <!-- Articles Grid -->
+            {% if articles %}
+            <div class="articles-grid">
+                {% for article in articles %}
+                <div class="article-card">
+                    <div class="article-img">
+                        {% if article.cover_image %}
+                        <img src="{{ article.cover_image.url }}" alt="{{ article.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                        <i class="fas fa-book-open"></i>
+                        {% endif %}
+                        
+                        {% if user.is_authenticated %}
+                        <button class="bookmark-btn {% if article.id in user_bookmarks %}active{% endif %}" 
+                                onclick="toggleBookmark({{ article.id }}, this)">
+                            <i class="{% if article.id in user_bookmarks %}fas{% else %}far{% endif %} fa-bookmark"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="article-body">
+                        <div class="article-meta">
+                            {% if article.category %}
+                            <span class="article-category">{{ article.category.name }}</span>
+                            {% endif %}
+                            <span class="article-time">
+                                <i class="far fa-clock"></i> {{ article.estimated_read_time }} min
+                            </span>
+                        </div>
+                        
+                        <h3 class="article-title">
+                            <a href="{% url 'article_detail' slug=article.slug %}">{{ article.title }}</a>
+                        </h3>
+                        
+                        <p class="article-summary">{{ article.summary|default:article.content|truncatewords:25 }}</p>
+                        
+                        <div class="article-footer">
+                            <div class="article-stats">
+                                <span><i class="far fa-eye"></i> {{ article.views_count }}</span>
+                                <span><i class="far fa-star"></i> {{ article.ratings.count }}</span>
+                            </div>
+                            
+                            {% if user.is_authenticated %}
+                                {% if article.id in user_progress %}
+                                    {% with progress=user_progress|get_item:article.id %}
+                                    {% if progress >= 90 %}
+                                    <span class="progress-badge completed"><i class="fas fa-check"></i> Completed</span>
+                                    {% else %}
+                                    <span class="progress-badge in-progress">{{ progress }}% read</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                <span class="progress-badge not-started">Not started</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="badge badge-{{ article.difficulty }}">{{ article.get_difficulty_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if articles.has_other_pages %}
+            <div class="pagination">
+                {% if articles.has_previous %}
+                <a href="?page={{ articles.previous_page_number }}">&laquo; Prev</a>
+                {% endif %}
+                
+                {% for num in articles.paginator.page_range %}
+                    {% if articles.number == num %}
+                    <span class="current">{{ num }}</span>
+                    {% elif num > articles.number|add:'-3' and num < articles.number|add:'3' %}
+                    <a href="?page={{ num }}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if articles.has_next %}
+                <a href="?page={{ articles.next_page_number }}">Next &raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-search"></i>
+                <h3>No Articles Found</h3>
+                <p>Try adjusting your filters or search terms</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+function toggleBookmark(articleId, button) {
+    fetch('/toggle-bookmark/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ article_id: articleId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'added') {
+            button.classList.add('active');
+            button.innerHTML = '<i class="fas fa-bookmark"></i>';
+        } else {
+            button.classList.remove('active');
+            button.innerHTML = '<i class="far fa-bookmark"></i>';
+        }
+    });
+}
+</script>
+{% endblock %}

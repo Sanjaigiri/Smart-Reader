@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Users - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --admin-sidebar: #1e1e2d;
+        --admin-sidebar-hover: #2a2a3d;
+        --admin-accent: #6366f1;
+    }
+    
+    .admin-layout {
+        display: flex;
+        min-height: calc(100vh - 70px);
+    }
+    
+    /* Sidebar */
+    .admin-sidebar {
+        width: 260px;
+        background: var(--admin-sidebar);
+        padding: 1.5rem 0;
+        position: sticky;
+        top: 70px;
+        height: calc(100vh - 70px);
+        overflow-y: auto;
+    }
+    
+    .admin-logo {
+        padding: 0 1.5rem 1.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .admin-logo h2 {
+        color: white;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .admin-logo h2 i {
+        color: var(--admin-accent);
+    }
+    
+    .admin-logo small {
+        display: block;
+        color: rgba(255,255,255,0.5);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    
+    .admin-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .admin-menu-section {
+        padding: 0.75rem 1.5rem 0.5rem;
+        color: rgba(255,255,255,0.4);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+    
+    .admin-menu a {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        color: rgba(255,255,255,0.7);
+        text-decoration: none;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+    }
+    
+    .admin-menu a:hover {
+        background: var(--admin-sidebar-hover);
+        color: white;
+    }
+    
+    .admin-menu a.active {
+        background: var(--admin-sidebar-hover);
+        color: white;
+        border-left-color: var(--admin-accent);
+    }
+    
+    .admin-menu a i {
+        width: 20px;
+        text-align: center;
+    }
+    
+    .menu-badge {
+        margin-left: auto;
+        background: var(--admin-accent);
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .admin-sidebar { display: none; }
+    }
+    
+    /* Main Content */
+    .admin-main {
+        flex: 1;
+        padding: 2rem;
+        background: var(--bg-secondary);
+    }
+    
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .admin-header h1 {
+        font-size: 1.75rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    /* Filters */
+    .filters-bar {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .search-box {
+        flex: 1;
+        min-width: 250px;
+        position: relative;
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+    
+    .search-box i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+    }
+    
+    .filter-select {
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-width: 150px;
+    }
+    
+    /* Table */
+    .table-card {
+        background: var(--bg-primary);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .data-table th {
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        background: var(--bg-secondary);
+    }
+    
+    .data-table tbody tr:hover {
+        background: var(--bg-secondary);
+    }
+    
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    
+    .user-details {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .user-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .user-email {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .status-badge.active {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .status-badge.inactive {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    
+    .role-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .role-badge.super-admin {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+    
+    .role-badge.admin {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+    }
+    
+    .role-badge.user {
+        background: rgba(100, 116, 139, 0.1);
+        color: #64748b;
+    }
+    
+    .action-btns {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .action-btn {
+        padding: 0.5rem 0.75rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+    }
+    
+    .action-btn.toggle {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+    }
+    
+    .action-btn.toggle:hover {
+        background: rgba(245, 158, 11, 0.2);
+    }
+    
+    .action-btn.delete {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+    
+    .action-btn.delete:hover {
+        background: rgba(239, 68, 68, 0.2);
+    }
+    
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1.5rem;
+    }
+    
+    .pagination a,
+    .pagination span {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+    }
+    
+    .pagination a:hover {
+        background: var(--bg-secondary);
+    }
+    
+    .pagination .current {
+        background: var(--admin-accent);
+        color: white;
+        border-color: var(--admin-accent);
+    }
+    
+    /* Stats Cards */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    @media (max-width: 1200px) {
+        .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 600px) {
+        .stats-row { grid-template-columns: 1fr; }
+    }
+    
+    .stat-mini {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stat-mini-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+    
+    .stat-mini-icon.total { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+    .stat-mini-icon.active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .stat-mini-icon.inactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .stat-mini-icon.admin { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    
+    .stat-mini-content h4 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    
+    .stat-mini-content span {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="admin-logo">
+            <h2><i class="fas fa-shield-alt"></i> Admin Panel</h2>
+            <small>SmartReader Management</small>
+        </div>
+        
+        <ul class="admin-menu">
+            <li class="admin-menu-section">Main</li>
+            <li><a href="{% url 'admin_dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="{% url 'admin_analytics' %}"><i class="fas fa-chart-line"></i> Analytics</a></li>
+            
+            <li class="admin-menu-section">Content Management</li>
+            <li><a href="{% url 'admin_articles' %}"><i class="fas fa-newspaper"></i> All Articles</a></li>
+            <li><a href="{% url 'admin_add_article' %}"><i class="fas fa-plus-circle"></i> Add New Article</a></li>
+            
+            <li class="admin-menu-section">User Management</li>
+            <li><a href="{% url 'admin_users' %}" class="active"><i class="fas fa-users"></i> All Users</a></li>
+            
+            <li class="admin-menu-section">System</li>
+            <li><a href="{% url 'home' %}"><i class="fas fa-globe"></i> View Website</a></li>
+            <li><a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1><i class="fas fa-users"></i> User Management</h1>
+        </div>
+        
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-mini">
+                <div class="stat-mini-icon total"><i class="fas fa-users"></i></div>
+                <div class="stat-mini-content">
+                    <h4>{{ total_users }}</h4>
+                    <span>Total Users</span>
+                </div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-icon active"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-mini-content">
+                    <h4>{{ active_users }}</h4>
+                    <span>Active Users</span>
+                </div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-icon inactive"><i class="fas fa-ban"></i></div>
+                <div class="stat-mini-content">
+                    <h4>{{ inactive_users }}</h4>
+                    <span>Inactive Users</span>
+                </div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-icon admin"><i class="fas fa-crown"></i></div>
+                <div class="stat-mini-content">
+                    <h4>{{ admin_users }}</h4>
+                    <span>Admins</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <form method="GET" class="filters-bar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" name="search" placeholder="Search by name or email..." value="{{ search }}">
+            </div>
+            <select name="status" class="filter-select">
+                <option value="">All Status</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+                <option value="staff" {% if status == 'staff' %}selected{% endif %}>Staff/Admin</option>
+            </select>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+        </form>
+        
+        <!-- Users Table -->
+        <div class="table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Joined</th>
+                        <th>Status</th>
+                        <th>Role</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">{{ user.username|slice:":1"|upper }}</div>
+                                <div class="user-details">
+                                    <span class="user-name">{{ user.first_name|default:user.username }} {{ user.last_name }}</span>
+                                    <span class="user-email">{{ user.email }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="status-badge active">Active</span>
+                            {% else %}
+                            <span class="status-badge inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_superuser %}
+                            <span class="role-badge super-admin"><i class="fas fa-crown"></i> Super Admin</span>
+                            {% elif user.is_staff %}
+                            <span class="role-badge admin"><i class="fas fa-shield-alt"></i> Admin</span>
+                            {% else %}
+                            <span class="role-badge user"><i class="fas fa-user"></i> User</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</td>
+                        <td>
+                            <div class="action-btns">
+                                {% if not user.is_superuser %}
+                                <form method="POST" action="{% url 'admin_toggle_user' user.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="action-btn toggle" title="{% if user.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                        <i class="fas {% if user.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
+                                        {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'admin_delete_user' user.id %}" style="display: inline;" 
+                                      onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="action-btn delete" title="Delete User">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;"><i class="fas fa-lock"></i> Protected</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 1rem; display: block; opacity: 0.5;"></i>
+                            No users found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- Pagination -->
+            {% if users.has_other_pages %}
+            <div class="pagination">
+                {% if users.has_previous %}
+                <a href="?page={{ users.previous_page_number }}&search={{ search }}&status={{ status }}">&laquo; Prev</a>
+                {% endif %}
+                
+                {% for num in users.paginator.page_range %}
+                    {% if users.number == num %}
+                    <span class="current">{{ num }}</span>
+                    {% elif num > users.number|add:'-3' and num < users.number|add:'3' %}
+                    <a href="?page={{ num }}&search={{ search }}&status={{ status }}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if users.has_next %}
+                <a href="?page={{ users.next_page_number }}&search={{ search }}&status={{ status }}">Next &raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}

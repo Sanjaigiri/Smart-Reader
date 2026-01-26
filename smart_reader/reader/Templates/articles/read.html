@@ -1,0 +1,1285 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .reading-page {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        max-width: 1400px;
+        margin: 0 auto;
+        gap: 2rem;
+        padding: 2rem;
+    }
+    
+    /* Article Content */
+    .article-main {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+    
+    .article-cover {
+        width: 100%;
+        height: 300px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .article-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .article-cover i {
+        font-size: 5rem;
+        color: white;
+    }
+    
+    .article-header {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .article-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .article-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.25rem;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-bottom: 1rem;
+    }
+    
+    .article-info {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+    }
+    
+    .article-info span {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .article-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+    
+    /* Reading Progress Bar */
+    .reading-progress-bar {
+        position: fixed;
+        top: 72px;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--bg-tertiary);
+        z-index: 100;
+    }
+    
+    .reading-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        width: 0%;
+        transition: width 0.1s;
+    }
+    
+    /* Article Content */
+    .article-content {
+        padding: 2rem;
+        font-size: 1.125rem;
+        line-height: 1.9;
+        color: var(--text-primary);
+    }
+    
+    .article-content p {
+        margin-bottom: 1.5rem;
+    }
+    
+    .article-content h2,
+    .article-content h3 {
+        font-family: 'Playfair Display', serif;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .article-content blockquote {
+        border-left: 4px solid var(--primary);
+        padding-left: 1.5rem;
+        margin: 2rem 0;
+        font-style: italic;
+        color: var(--text-secondary);
+    }
+    
+    .article-content code {
+        background: var(--bg-tertiary);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+    
+    /* Highlight Colors */
+    mark.highlight-yellow { background: #fef08a; }
+    mark.highlight-green { background: #86efac; }
+    mark.highlight-blue { background: #93c5fd; }
+    mark.highlight-pink { background: #f9a8d4; }
+    mark.highlight-orange { background: #fed7aa; }
+    
+    /* Sidebar */
+    .article-sidebar {
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .sidebar-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+    }
+    
+    .sidebar-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Progress Card */
+    .progress-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-stat {
+        text-align: center;
+        padding: 1rem;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+    }
+    
+    .progress-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .progress-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+    
+    /* Highlight Tools */
+    .highlight-tools {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .highlight-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .highlight-btn:hover,
+    .highlight-btn.active {
+        transform: scale(1.2);
+        border-color: var(--text-primary);
+    }
+    
+    .highlight-btn.yellow { background: #fef08a; }
+    .highlight-btn.green { background: #86efac; }
+    .highlight-btn.blue { background: #93c5fd; }
+    .highlight-btn.pink { background: #f9a8d4; }
+    .highlight-btn.orange { background: #fed7aa; }
+    
+    /* Notes Section */
+    .notes-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .note-item {
+        padding: 1rem;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .note-quote {
+        font-style: italic;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        padding-left: 0.75rem;
+        border-left: 3px solid var(--primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .note-text {
+        font-size: 0.9375rem;
+    }
+    
+    .note-footer {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    /* Note Form */
+    .note-form textarea {
+        width: 100%;
+        min-height: 80px;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        resize: vertical;
+        margin-bottom: 0.75rem;
+        font-family: inherit;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+    
+    /* Rating */
+    .rating-section {
+        text-align: center;
+    }
+    
+    .star-rating {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .star-rating i {
+        font-size: 1.75rem;
+        cursor: pointer;
+        color: var(--border);
+        transition: all 0.3s;
+    }
+    
+    .star-rating i:hover,
+    .star-rating i.active {
+        color: var(--accent);
+        transform: scale(1.2);
+    }
+    
+    .avg-rating {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent);
+    }
+    
+    .rating-emoji {
+        font-size: 2.5rem;
+        margin: 0.5rem 0;
+        animation: bounceIn 0.5s;
+    }
+    
+    @keyframes bounceIn {
+        0% { transform: scale(0); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+    
+    .rating-message {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        margin: 0.5rem 0;
+    }
+    
+    .feedback-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .feedback-form textarea {
+        width: 100%;
+        min-height: 80px;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        resize: vertical;
+        margin-bottom: 0.75rem;
+        font-family: inherit;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+    
+    .rating-count {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+    
+    /* Related Articles */
+    .related-article {
+        display: flex;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .related-article:last-child {
+        border-bottom: none;
+    }
+    
+    .related-img {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        flex-shrink: 0;
+    }
+    
+    .related-info h4 {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    
+    .related-info h4 a {
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+    
+    .related-info h4 a:hover {
+        color: var(--primary);
+    }
+    
+    .related-info span {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    /* Selection Popup */
+    .selection-popup {
+        position: absolute;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.5rem;
+        box-shadow: var(--shadow-lg);
+        display: none;
+        z-index: 1000;
+    }
+    
+    .selection-popup.active {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .selection-popup button {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    .selection-popup button:hover {
+        background: var(--bg-tertiary);
+    }
+    
+    @media (max-width: 1024px) {
+        .reading-page {
+            grid-template-columns: 1fr;
+        }
+        
+        .article-sidebar {
+            position: static;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .article-sidebar {
+            grid-template-columns: 1fr;
+        }
+        
+        .article-title {
+            font-size: 1.75rem;
+        }
+    }
+    
+    /* ========================================
+       PROFESSIONAL ARTICLE TAGS
+       ======================================== */
+    
+    .article-tags-section {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .tags-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .article-tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .pro-tag {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-decoration: none;
+        color: var(--text-secondary);
+        background: var(--bg-tertiary);
+        border: 1px solid transparent;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    
+    .pro-tag:hover {
+        color: var(--primary);
+        background: rgba(99, 102, 241, 0.08);
+        border-color: var(--primary);
+    }
+    
+    /* Purchase Dropdown Styles */
+    .btn-warning {
+        background: #f59e0b;
+        color: white;
+        border: none;
+    }
+    
+    .btn-warning:hover {
+        background: #d97706;
+    }
+    
+    .purchase-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 8px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        min-width: 220px;
+        z-index: 1000;
+    }
+    
+    .purchase-dropdown.show {
+        display: block;
+    }
+    
+    .dropdown-header {
+        padding: 12px 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+    }
+    
+    .dropdown-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 0;
+    }
+    
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    
+    .dropdown-item:hover {
+        background: var(--bg-tertiary);
+    }
+    
+    .dropdown-item i {
+        width: 20px;
+        font-size: 1.1rem;
+    }
+    
+    .dropdown-item .fa-amazon {
+        color: #ff9900;
+    }
+    
+    .dropdown-item .fa-shopping-bag {
+        color: #2874f0;
+    }
+    
+    .dropdown-item .fa-store {
+        color: #f43397;
+    }
+    
+    .no-purchase-info {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        background: var(--bg-tertiary);
+        border-radius: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Reading Progress Bar -->
+<div class="reading-progress-bar">
+    <div class="reading-progress-fill" id="progressBar"></div>
+</div>
+
+<!-- Selection Popup -->
+<div class="selection-popup" id="selectionPopup">
+    <button onclick="highlightSelection('yellow')" style="background: #fef08a;" title="Yellow highlight">
+        <i class="fas fa-highlighter"></i>
+    </button>
+    <button onclick="highlightSelection('green')" style="background: #86efac;" title="Green highlight">
+        <i class="fas fa-highlighter"></i>
+    </button>
+    <button onclick="highlightSelection('blue')" style="background: #93c5fd;" title="Blue highlight">
+        <i class="fas fa-highlighter"></i>
+    </button>
+    <button onclick="addNoteFromSelection()" title="Add note">
+        <i class="fas fa-sticky-note"></i>
+    </button>
+</div>
+
+<div class="reading-page">
+    <!-- Main Article -->
+    <article class="article-main">
+        <div class="article-cover">
+            {% if article.cover_image %}
+            <img src="{{ article.cover_image.url }}" alt="{{ article.title }}">
+            {% else %}
+            <i class="fas fa-book-open"></i>
+            {% endif %}
+        </div>
+        
+        <header class="article-header">
+            <div class="article-meta">
+                {% if article.category %}
+                <span class="badge badge-primary">{{ article.category.name }}</span>
+                {% endif %}
+                <span class="badge badge-{{ article.difficulty }}">{{ article.get_difficulty_display }}</span>
+                {% if article.is_featured %}
+                <span class="badge badge-warning"><i class="fas fa-star"></i> Featured</span>
+                {% endif %}
+            </div>
+            
+            <h1 class="article-title">{{ article.title }}</h1>
+            
+            <div class="article-info">
+                {% if article.author %}
+                <span><i class="fas fa-user"></i> {{ article.author.username }}</span>
+                {% endif %}
+                <span><i class="far fa-calendar"></i> {{ article.created_at|date:"M d, Y" }}</span>
+                <span><i class="far fa-clock"></i> {{ article.estimated_read_time }} min read</span>
+                <span><i class="far fa-eye"></i> {{ article.views_count }} views</span>
+            </div>
+            
+            <div class="article-actions">
+                {% if user.is_authenticated %}
+                <button class="btn {% if is_bookmarked %}btn-primary{% else %}btn-secondary{% endif %}" 
+                        onclick="toggleBookmark()" id="bookmarkBtn">
+                    <i class="{% if is_bookmarked %}fas{% else %}far{% endif %} fa-bookmark"></i>
+                    {% if is_bookmarked %}Bookmarked{% else %}Bookmark{% endif %}
+                </button>
+                <a href="{% url 'download_article' article_id=article.id %}" class="btn btn-secondary" title="Download as PDF">
+                    <i class="fas fa-download"></i> Download
+                </a>
+                {% endif %}
+                <button class="btn btn-secondary" onclick="shareArticle()">
+                    <i class="fas fa-share-alt"></i> Share
+                </button>
+                
+                <!-- Purchase Button (Only if book links are available) -->
+                {% if article.has_purchase_links %}
+                <div class="dropdown-wrapper" style="position: relative; display: inline-block;">
+                    <button class="btn btn-warning" onclick="togglePurchaseDropdown(event)" id="purchaseBtn">
+                        <i class="fas fa-shopping-cart"></i> Purchase Book
+                    </button>
+                    <div class="purchase-dropdown" id="purchaseDropdown">
+                        {% if article.book_title %}
+                        <div class="dropdown-header">{{ article.book_title }}</div>
+                        <div class="dropdown-divider"></div>
+                        {% endif %}
+                        
+                        {% if article.amazon_link %}
+                        <a href="{{ article.amazon_link }}" target="_blank" rel="noopener noreferrer" class="dropdown-item">
+                            <i class="fab fa-amazon"></i> Buy on Amazon
+                        </a>
+                        {% endif %}
+                        
+                        {% if article.flipkart_link %}
+                        <a href="{{ article.flipkart_link }}" target="_blank" rel="noopener noreferrer" class="dropdown-item">
+                            <i class="fas fa-shopping-bag"></i> Buy on Flipkart
+                        </a>
+                        {% endif %}
+                        
+                        {% if article.meesho_link %}
+                        <a href="{{ article.meesho_link }}" target="_blank" rel="noopener noreferrer" class="dropdown-item">
+                            <i class="fas fa-store"></i> Buy on Meesho
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="no-purchase-info" title="Related book not available for purchase">
+                    <small style="color: #6c757d; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-info-circle"></i>
+                        Book not available
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+        
+        <div class="article-content" id="articleContent">
+            {{ article.content|safe }}
+        </div>
+        
+        <!-- Tags -->
+        {% if article.tags.all %}
+        <div class="article-tags-section">
+            <span class="tags-label"><i class="fas fa-tags"></i> Tags</span>
+            <div class="article-tags-container">
+                {% for tag in article.tags.all %}
+                <a href="{% url 'articles' %}?tag={{ tag.slug }}" class="pro-tag" style="--i: {{ forloop.counter0 }};">
+                    {{ tag.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </article>
+    
+    <!-- Sidebar -->
+    <aside class="article-sidebar">
+        <!-- Progress Card -->
+        {% if user.is_authenticated and progress %}
+        <div class="sidebar-card">
+            <h3 class="sidebar-title"><i class="fas fa-chart-line"></i> Your Progress</h3>
+            
+            <div class="progress-stats">
+                <div class="progress-stat">
+                    <div class="progress-stat-value" id="progressPercent">{{ progress.scroll_percentage }}%</div>
+                    <div class="progress-stat-label">Completed</div>
+                </div>
+                <div class="progress-stat">
+                    <div class="progress-stat-value" id="timeSpent">{{ progress.time_spent|floatformat:0 }}</div>
+                    <div class="progress-stat-label">Seconds</div>
+                </div>
+            </div>
+            
+            <div class="progress" style="margin-bottom: 1rem;">
+                <div class="progress-bar" id="sidebarProgress" style="width: {{ progress.scroll_percentage }}%"></div>
+            </div>
+            
+            {% if progress.is_completed %}
+            <div class="badge badge-success" style="width: 100%; justify-content: center; padding: 0.5rem;">
+                <i class="fas fa-check-circle"></i> Completed!
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Highlight Tools -->
+        {% if user.is_authenticated %}
+        <div class="sidebar-card">
+            <h3 class="sidebar-title"><i class="fas fa-highlighter"></i> Highlight Tools</h3>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                Select text to highlight or add notes
+            </p>
+            <div class="highlight-tools">
+                <button class="highlight-btn yellow" data-color="yellow" title="Yellow"></button>
+                <button class="highlight-btn green" data-color="green" title="Green"></button>
+                <button class="highlight-btn blue" data-color="blue" title="Blue"></button>
+                <button class="highlight-btn pink" data-color="pink" title="Pink"></button>
+                <button class="highlight-btn orange" data-color="orange" title="Orange"></button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Notes -->
+        {% if user.is_authenticated %}
+        <div class="sidebar-card">
+            <h3 class="sidebar-title"><i class="fas fa-sticky-note"></i> Notes ({{ user_notes.count }})</h3>
+            
+            <form method="POST" action="{% url 'save_note' %}" class="note-form">
+                {% csrf_token %}
+                <input type="hidden" name="article_id" value="{{ article.id }}">
+                <input type="hidden" name="selected_text" id="selectedTextInput">
+                <textarea name="note" placeholder="Write a note..." required></textarea>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-plus"></i> Add Note
+                </button>
+            </form>
+            
+            {% if user_notes %}
+            <div class="notes-list" style="margin-top: 1rem;">
+                {% for note in user_notes %}
+                <div class="note-item">
+                    {% if note.selected_text %}
+                    <div class="note-quote">"{{ note.selected_text|truncatewords:15 }}"</div>
+                    {% endif %}
+                    <div class="note-text">{{ note.note }}</div>
+                    <div class="note-footer">
+                        <span>{{ note.created_at|date:"M d, Y" }}</span>
+                        <a href="{% url 'delete_note' note.id %}" style="color: var(--danger);">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Rating & Feedback -->
+        <div class="sidebar-card">
+            <h3 class="sidebar-title"><i class="fas fa-star"></i> Rate This Article</h3>
+            
+            <div class="rating-section">
+                <div class="avg-rating">{{ avg_rating|floatformat:1 }}</div>
+                <div class="rating-count">{{ rating_count }} rating{{ rating_count|pluralize }}</div>
+                
+                {% if user.is_authenticated %}
+                <div class="star-rating" style="margin-top: 1rem;">
+                    {% for i in "12345" %}
+                    <i class="{% if user_rating and user_rating.score >= forloop.counter %}fas{% else %}far{% endif %} fa-star" 
+                       data-rating="{{ forloop.counter }}"
+                       onclick="rateArticle({{ forloop.counter }})"></i>
+                    {% endfor %}
+                </div>
+                <div class="rating-emoji" id="ratingEmoji"></div>
+                <p class="rating-message" id="ratingMessage">Click to rate this article</p>
+                
+                <!-- Feedback Section -->
+                <div class="feedback-section">
+                    <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem;">
+                        <i class="fas fa-comment"></i> Share Your Feedback
+                    </h4>
+                    <form id="feedbackForm" onsubmit="submitFeedback(event)">
+                        <textarea id="feedbackText" placeholder="What did you think about this article? Your feedback helps us improve..." required></textarea>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="submit" class="btn btn-sm btn-primary" style="flex: 1;">
+                                <i class="fas fa-paper-plane"></i> Submit Feedback
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% else %}
+                <p style="font-size: 0.875rem; margin-top: 1rem;">
+                    <a href="{% url 'login' %}">Login</a> to rate and provide feedback
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Related Articles -->
+        {% if related_articles %}
+        <div class="sidebar-card">
+            <h3 class="sidebar-title"><i class="fas fa-link"></i> Related Articles</h3>
+            
+            {% for related in related_articles %}
+            <div class="related-article">
+                <div class="related-img"></div>
+                <div class="related-info">
+                    <h4><a href="{% url 'article_detail' slug=related.slug %}">{{ related.title }}</a></h4>
+                    <span><i class="far fa-clock"></i> {{ related.estimated_read_time }} min</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </aside>
+</div>
+
+<!-- Hidden inputs for JS -->
+<input type="hidden" id="articleId" value="{{ article.id }}">
+<input type="hidden" id="lastPosition" value="{{ progress.last_position|default:0 }}">
+<input type="hidden" id="maxProgress" value="{{ progress.max_scroll_percentage|default:0 }}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const articleId = document.getElementById('articleId').value;
+    const articleContent = document.getElementById('articleContent');
+    let startTime = Date.now();
+    let lastSaveTime = Date.now();
+    let selectedColor = 'yellow';
+    
+    // Track max progress (only increases, never decreases)
+    let maxProgressReached = parseInt(document.getElementById('maxProgress').value) || 0;
+    
+    // Scroll to last position on load
+    window.onload = () => {
+        const lastPos = parseInt(document.getElementById('lastPosition').value) || 0;
+        if (lastPos > 0) {
+            window.scrollTo(0, lastPos);
+        }
+        // Update display with max progress
+        updateProgressDisplay(maxProgressReached);
+    };
+    
+    // Update progress display
+    function updateProgressDisplay(percentage) {
+        const sidebarProgress = document.getElementById('sidebarProgress');
+        const progressPercent = document.getElementById('progressPercent');
+        if (sidebarProgress) sidebarProgress.style.width = percentage + '%';
+        if (progressPercent) progressPercent.textContent = percentage + '%';
+    }
+    
+    // Update reading progress - progress bar shows current position, but saved progress only increases
+    function updateProgress() {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        
+        // Calculate percentage - if at bottom (within 10px), show 100%
+        let currentPercentage;
+        if (scrollTop + 10 >= docHeight) {
+            currentPercentage = 100;
+        } else {
+            currentPercentage = Math.min(100, Math.round((scrollTop / docHeight) * 100));
+        }
+        
+        // Update top progress bar to show current scroll position
+        document.getElementById('progressBar').style.width = currentPercentage + '%';
+        
+        // Update max progress only if current is higher (PROGRESS ONLY INCREASES)
+        if (currentPercentage > maxProgressReached) {
+            maxProgressReached = currentPercentage;
+            // Update sidebar to show max progress reached
+            updateProgressDisplay(maxProgressReached);
+        }
+        
+        return { scrollTop, currentPercentage, maxPercentage: maxProgressReached };
+    }
+    
+    // Track total time on page - initialize with existing time from progress
+    let totalTimeOnPage = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
+    let pageStartTime = Date.now();
+    let lastDisplayUpdate = Date.now();
+    
+    // Update time display every second
+    function updateTimeDisplay() {
+        const currentSessionTime = Math.floor((Date.now() - pageStartTime) / 1000);
+        const initialTime = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
+        const displayTime = Math.floor(initialTime) + currentSessionTime;
+        const timeSpentEl = document.getElementById('timeSpent');
+        if (timeSpentEl) {
+            timeSpentEl.textContent = displayTime;
+        }
+    }
+    
+    // Update time display every second
+    setInterval(updateTimeDisplay, 1000);
+    
+    // Save progress function
+    function saveProgress() {
+        const { scrollTop, currentPercentage, maxPercentage } = updateProgress();
+        const currentTime = Date.now();
+        const timeSpent = Math.floor((currentTime - lastSaveTime) / 1000);
+        
+        if (timeSpent < 2) return; // Minimum 2 seconds between saves
+        
+        const initialTime = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
+        totalTimeOnPage = initialTime + Math.floor((Date.now() - pageStartTime) / 1000);
+        
+        fetch('/save-progress/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                article_id: articleId,
+                position: scrollTop,
+                percentage: currentPercentage,  // Current position for reference
+                time: timeSpent
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            lastSaveTime = Date.now();
+            // Update max percentage from server response if available
+            if (data.max_percentage) {
+                maxProgressReached = Math.max(maxProgressReached, data.max_percentage);
+                updateProgressDisplay(maxProgressReached);
+            }
+            // Update total time from server if available
+            if (data.total_time) {
+                totalTimeOnPage = data.total_time;
+            }
+            
+            // Show completion notification if article was just completed
+            if (data.just_completed) {
+                showCompletionNotification(data);
+            }
+            
+            console.log('Progress saved! Current:', currentPercentage, '%, Max:', maxPercentage, '%');
+        })
+        .catch(err => console.error('Error saving progress:', err));
+    }
+    
+    // Show completion notification with confetti
+    function showCompletionNotification(data) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 2rem 3rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(16, 185, 129, 0.4);
+            z-index: 10000;
+            text-align: center;
+            animation: slideInScale 0.5s ease-out;
+        `;
+        
+        const goalMessage = data.weekly_goal_achieved 
+            ? `<p style="font-size: 1.125rem; margin-top: 0.5rem;">🎉 Weekly goal achieved! (${data.this_week_reads}/${data.reading_goal})</p>`
+            : `<p style="font-size: 1.125rem; margin-top: 0.5rem;">Progress: ${data.this_week_reads}/${data.reading_goal} articles this week</p>`;
+        
+        notification.innerHTML = `
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">✨ Article Completed! ✨</h2>
+            ${goalMessage}
+            <p style="font-size: 0.9rem; opacity: 0.9; margin-top: 1rem;">Great job! Keep reading!</p>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Add confetti effect
+        createConfetti();
+        
+        // Remove notification after 4 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOutScale 0.5s ease-in';
+            setTimeout(() => notification.remove(), 500);
+        }, 4000);
+    }
+    
+    // Simple confetti effect
+    function createConfetti() {
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.cssText = `
+                position: fixed;
+                width: 10px;
+                height: 10px;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                top: 50%;
+                left: 50%;
+                opacity: 1;
+                pointer-events: none;
+                z-index: 9999;
+                animation: confettiFall ${1 + Math.random() * 2}s linear forwards;
+            `;
+            confetti.style.setProperty('--x', (Math.random() - 0.5) * 200 + 'vw');
+            confetti.style.setProperty('--y', Math.random() * 100 + 'vh');
+            document.body.appendChild(confetti);
+            setTimeout(() => confetti.remove(), 3000);
+        }
+    }
+    
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInScale {
+            from {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutScale {
+            from {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes confettiFall {
+            to {
+                transform: translate(var(--x), var(--y)) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    
+    // Auto-save every 60 seconds (1 minute)
+    setInterval(saveProgress, 60000);
+    
+    // Also save every 30 seconds while actively reading
+    setInterval(() => {
+        const timeActive = Math.floor((Date.now() - lastSaveTime) / 1000);
+        if (timeActive >= 30) {
+            saveProgress();
+        }
+    }, 30000);
+    
+    // Debounced scroll handler
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+        updateProgress();
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(saveProgress, 1000);
+    });
+    
+    // Selection popup
+    const selectionPopup = document.getElementById('selectionPopup');
+    
+    articleContent.addEventListener('mouseup', (e) => {
+        const selection = window.getSelection();
+        if (selection.toString().trim().length > 0) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            selectionPopup.style.top = (rect.top + window.scrollY - 50) + 'px';
+            selectionPopup.style.left = (rect.left + rect.width / 2 - 80) + 'px';
+            selectionPopup.classList.add('active');
+        } else {
+            selectionPopup.classList.remove('active');
+        }
+    });
+    
+    // Highlight selection
+    function highlightSelection(color) {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const text = selection.toString();
+            
+            // Create highlight
+            const mark = document.createElement('mark');
+            mark.className = 'highlight-' + color;
+            range.surroundContents(mark);
+            
+            // Save to server
+            fetch('/save-highlight/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    article_id: articleId,
+                    text: text,
+                    color: color
+                })
+            });
+            
+            selectionPopup.classList.remove('active');
+            selection.removeAllRanges();
+        }
+    }
+    
+    // Add note from selection
+    function addNoteFromSelection() {
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+        
+        if (text) {
+            document.getElementById('selectedTextInput').value = text;
+            document.querySelector('.note-form textarea').focus();
+        }
+        
+        selectionPopup.classList.remove('active');
+    }
+    
+    // Bookmark toggle
+    function toggleBookmark() {
+        fetch('/toggle-bookmark/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ article_id: articleId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const btn = document.getElementById('bookmarkBtn');
+            if (data.status === 'added') {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                btn.innerHTML = '<i class="fas fa-bookmark"></i> Bookmarked';
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+                btn.innerHTML = '<i class="far fa-bookmark"></i> Bookmark';
+            }
+        });
+    }
+    
+    // Rate article with emoji feedback
+    function rateArticle(score) {
+        const emojiMap = {
+            1: { emoji: '😞', message: 'We\'re sorry! We\'ll try to improve.' },
+            2: { emoji: '😕', message: 'Thanks for the feedback! We can do better.' },
+            3: { emoji: '😊', message: 'Good! Thanks for reading.' },
+            4: { emoji: '😄', message: 'Great! We\'re glad you enjoyed it!' },
+            5: { emoji: '🤩', message: 'Awesome! You\'re amazing! Thanks for the 5 stars!' }
+        };
+        
+        fetch('/rate-article/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                article_id: articleId,
+                score: score
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update stars
+            document.querySelectorAll('.star-rating i').forEach((star, index) => {
+                if (index < score) {
+                    star.classList.remove('far');
+                    star.classList.add('fas');
+                } else {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                }
+            });
+            
+            // Show emoji and message
+            const emoji = emojiMap[score];
+            document.getElementById('ratingEmoji').textContent = emoji.emoji;
+            document.getElementById('ratingMessage').textContent = emoji.message;
+            
+            // Update average
+            document.querySelector('.avg-rating').textContent = data.avg_rating;
+        });
+    }
+    
+    // Submit feedback
+    function submitFeedback(event) {
+        event.preventDefault();
+        const feedbackText = document.getElementById('feedbackText').value;
+        
+        fetch('/submit-feedback/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                article_id: articleId,
+                feedback_text: feedbackText,
+                is_helpful: true
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('✨ ' + data.message);
+                document.getElementById('feedbackText').value = '';
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('Failed to submit feedback. Please try again.');
+        });
+    }
+    
+    // Share article
+    function shareArticle() {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ article.title }}',
+                url: window.location.href
+            });
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Link copied to clipboard!');
+        }
+    }
+    
+    // Toggle purchase dropdown
+    function togglePurchaseDropdown(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('purchaseDropdown');
+        dropdown.classList.toggle('show');
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        const dropdown = document.getElementById('purchaseDropdown');
+        if (dropdown && !event.target.closest('.dropdown-wrapper')) {
+            dropdown.classList.remove('show');
+        }
+    });
+    
+    // Save progress before leaving
+    window.addEventListener('beforeunload', saveProgress);
+</script>
+{% endblock %}

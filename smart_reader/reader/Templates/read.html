@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ article.title }}</title>
+</head>
+<body>
+
+<h2>{{ article.title }}</h2>
+
+<input type="hidden" id="articleId" value="{{ article.id }}">
+<input type="hidden" id="lastPos" value="{{ progress.last_position }}">
+
+<div id="content" style="width:60%; line-height:1.6;">
+    {{ article.content }}
+</div>
+
+<hr>
+
+<!-- Highlight Button -->
+<button onclick="highlightText()">Highlight</button>
+
+<!-- Save Note -->
+<form method="post" action="/save-note/">
+    {% csrf_token %}
+    <input type="hidden" name="article_id" value="{{ article.id }}">
+    <textarea name="selected_text" placeholder="Selected text"></textarea><br>
+    <textarea name="note" placeholder="Your note"></textarea><br>
+    <button type="submit">Save Note</button>
+</form>
+
+<script>
+let startTime = Date.now();
+
+// Resume reading
+window.onload = () => {
+    window.scrollTo(0, document.getElementById("lastPos").value);
+};
+
+// Save progress on scroll
+window.addEventListener("scroll", () => {
+    let timeSpent = Math.floor((Date.now() - startTime) / 1000);
+
+    fetch("/save-progress/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            article_id: document.getElementById("articleId").value,
+            position: window.scrollY,
+            time: timeSpent
+        })
+    });
+});
+
+// Highlight text
+function highlightText() {
+    let selection = window.getSelection();
+    if (selection.rangeCount) {
+        let range = selection.getRangeAt(0);
+        let mark = document.createElement("mark");
+        range.surroundContents(mark);
+    }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Feedbacks - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-nav {
+        background: var(--bg-secondary);
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .admin-nav-links {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .admin-nav-link {
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    
+    .admin-nav-link:hover, .admin-nav-link.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .feedback-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .feedback-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .feedback-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .feedback-user {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .feedback-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+    }
+    
+    .feedback-text {
+        margin: 1rem 0;
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+    
+    .feedback-article {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
+    
+    .helpful-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .helpful-badge.positive {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .helpful-badge.negative {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    
+    .filter-section {
+        background: var(--bg-secondary);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: var(--bg-secondary);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-nav">
+    <div class="container">
+        <div class="admin-nav-links">
+            <a href="{% url 'admin_dashboard' %}" class="admin-nav-link">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a href="{% url 'admin_articles' %}" class="admin-nav-link">
+                <i class="fas fa-book"></i> Articles
+            </a>
+            <a href="{% url 'admin_users' %}" class="admin-nav-link">
+                <i class="fas fa-users"></i> Users
+            </a>
+            <a href="{% url 'admin_feedbacks' %}" class="admin-nav-link active">
+                <i class="fas fa-comments"></i> Feedbacks
+            </a>
+            <a href="{% url 'admin_analytics' %}" class="admin-nav-link">
+                <i class="fas fa-chart-pie"></i> Analytics
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="page-header">
+        <h1><i class="fas fa-comments"></i> User Feedbacks</h1>
+        <p>View and manage feedback from users</p>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ feedbacks.paginator.count }}</div>
+            <div class="stat-label">Total Feedbacks</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ articles_with_feedback.count }}</div>
+            <div class="stat-label">Articles with Feedback</div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="GET" class="filter-row">
+            <div>
+                <label class="form-label">Filter by Article</label>
+                <select name="article" class="form-control" onchange="this.form.submit()">
+                    <option value="">All Articles</option>
+                    {% for article in articles_with_feedback %}
+                    <option value="{{ article.id }}" {% if article.id|stringformat:"s" == selected_article %}selected{% endif %}>
+                        {{ article.title }} ({{ article.feedback_count }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="form-label">Filter by Type</label>
+                <select name="helpful" class="form-control" onchange="this.form.submit()">
+                    <option value="">All Feedbacks</option>
+                    <option value="yes" {% if selected_helpful == 'yes' %}selected{% endif %}>Helpful</option>
+                    <option value="no" {% if selected_helpful == 'no' %}selected{% endif %}>Not Helpful</option>
+                </select>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Feedbacks List -->
+    {% if feedbacks %}
+        {% for feedback in feedbacks %}
+        <div class="feedback-card">
+            <div class="feedback-header">
+                <div class="feedback-user">
+                    <div class="user-avatar">
+                        {{ feedback.user.username.0|upper }}
+                    </div>
+                    <div>
+                        <strong>{{ feedback.user.get_full_name|default:feedback.user.username }}</strong>
+                        <div class="feedback-meta">
+                            <span><i class="far fa-clock"></i> {{ feedback.created_at|timesince }} ago</span>
+                            <span class="helpful-badge {% if feedback.is_helpful %}positive{% else %}negative{% endif %}">
+                                {% if feedback.is_helpful %}
+                                    <i class="fas fa-thumbs-up"></i> Helpful
+                                {% else %}
+                                    <i class="fas fa-thumbs-down"></i> Not Helpful
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="feedback-text">
+                {{ feedback.feedback_text }}
+            </div>
+            
+            <div class="feedback-article">
+                <i class="fas fa-book text-primary"></i>
+                <strong>Article:</strong>
+                <a href="{% url 'article_detail' feedback.article.slug %}">{{ feedback.article.title }}</a>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if feedbacks.has_other_pages %}
+        <div class="pagination-container" style="margin-top: 2rem;">
+            <ul class="pagination">
+                {% if feedbacks.has_previous %}
+                <li><a href="?page={{ feedbacks.previous_page_number }}{% if selected_article %}&article={{ selected_article }}{% endif %}{% if selected_helpful %}&helpful={{ selected_helpful }}{% endif %}">Previous</a></li>
+                {% endif %}
+                
+                {% for num in feedbacks.paginator.page_range %}
+                    {% if feedbacks.number == num %}
+                    <li class="active"><span>{{ num }}</span></li>
+                    {% elif num > feedbacks.number|add:'-3' and num < feedbacks.number|add:'3' %}
+                    <li><a href="?page={{ num }}{% if selected_article %}&article={{ selected_article }}{% endif %}{% if selected_helpful %}&helpful={{ selected_helpful }}{% endif %}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if feedbacks.has_next %}
+                <li><a href="?page={{ feedbacks.next_page_number }}{% if selected_article %}&article={{ selected_article }}{% endif %}{% if selected_helpful %}&helpful={{ selected_helpful }}{% endif %}">Next</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-state" style="text-align: center; padding: 4rem 2rem;">
+            <i class="fas fa-comments" style="font-size: 4rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+            <h3>No Feedbacks Yet</h3>
+            <p>User feedbacks will appear here</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

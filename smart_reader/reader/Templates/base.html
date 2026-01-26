@@ -1,0 +1,840 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{% if request.user.is_authenticated and request.user.profile.language %}{{ request.user.profile.language }}{% else %}en{% endif %}" 
+      data-theme="{% if request.user.is_authenticated and request.user.profile.theme %}{{ request.user.profile.theme }}{% elif request.user.is_authenticated and request.user.profile.dark_mode %}dark{% else %}light{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Reader{% endblock %} | Your Personal Reading Hub</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .nav-brand i {
+            font-size: 1.75rem;
+        }
+        
+        .nav-brand span {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .nav-link {
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary);
+            background: var(--bg-tertiary);
+        }
+        
+        .nav-link.active {
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .nav-search {
+            position: relative;
+            width: 300px;
+        }
+        
+        .nav-search input {
+            width: 100%;
+            padding: 0.625rem 1rem 0.625rem 2.5rem;
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        .search-suggestions {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .search-suggestions.active {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .suggestion-category {
+            font-size: 0.75rem;
+            color: var(--primary);
+        }
+        
+        .suggestion-summary {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        
+        .nav-search i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .nav-user:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .nav-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-icon {
+            padding: 0.625rem;
+            border-radius: 8px;
+        }
+        
+        .btn-lg {
+            padding: 0.875rem 1.75rem;
+            font-size: 1rem;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .card-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .card-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Grid */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        
+        @media (max-width: 1024px) {
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 640px) {
+            .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+            .nav-search { display: none; }
+        }
+        
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .badge-primary { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+        .badge-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        
+        /* Progress Bar */
+        .progress {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 50px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 50px;
+            transition: width 0.3s;
+        }
+        
+        /* Stats Card */
+        .stat-card {
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        /* Messages */
+        .messages {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .message {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .message-success { border-left: 4px solid var(--success); }
+        .message-error { border-left: 4px solid var(--danger); }
+        .message-info { border-left: 4px solid var(--primary); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Footer */
+        .footer {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            padding: 3rem 2rem;
+            margin-top: 4rem;
+        }
+        
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 3rem;
+        }
+        
+        .footer-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 1rem;
+        }
+        
+        .footer-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.8;
+        }
+        
+        .footer-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        
+        .footer-links {
+            list-style: none;
+        }
+        
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            display: block;
+            padding: 0.375rem 0;
+            transition: color 0.2s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+        
+        .footer-bottom {
+            max-width: 1400px;
+            margin: 2rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        @media (max-width: 768px) {
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        /* Rating Stars */
+        .stars {
+            display: flex;
+            gap: 0.25rem;
+        }
+        
+        .stars i {
+            color: var(--accent);
+        }
+        
+        .stars i.empty {
+            color: var(--border);
+        }
+        
+        /* Dropdown */
+        .dropdown {
+            position: relative;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            min-width: 200px;
+            padding: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: all 0.2s;
+            z-index: 100;
+        }
+        
+        .dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0.5rem 0;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{% url 'home' %}" class="nav-brand">
+                <i class="fas fa-book-reader"></i>
+                <span>SmartReader</span>
+            </a>
+            
+            <div class="nav-links">
+                <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
+                <a href="{% url 'articles' %}" class="nav-link {% if request.resolver_match.url_name == 'articles' %}active{% endif %}">Explore</a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a>
+                <a href="{% url 'my_bookmarks' %}" class="nav-link {% if request.resolver_match.url_name == 'my_bookmarks' %}active{% endif %}">Bookmarks</a>
+                {% endif %}
+            </div>
+            
+            <form action="{% url 'search' %}" method="GET" class="nav-search" id="searchForm">
+                <i class="fas fa-search"></i>
+                <input type="text" name="q" id="searchInput" placeholder="Search articles..." value="{{ search_query|default:'' }}" autocomplete="off">
+                <div class="search-suggestions" id="searchSuggestions"></div>
+            </form>
+            
+            <div class="nav-actions">
+                {% if user.is_authenticated %}
+                <div class="dropdown">
+                    <div class="nav-user">
+                        <div class="nav-avatar">{{ user.username|slice:":1"|upper }}</div>
+                        <span>{{ user.username }}</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.75rem;"></i>
+                    </div>
+                    <div class="dropdown-menu">
+                        {% if is_admin_user %}
+                        <a href="{% url 'admin_dashboard' %}" class="dropdown-item" style="color: #6366f1; font-weight: 600;">
+                            <i class="fas fa-shield-alt"></i> Admin Panel
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        {% endif %}
+                        <a href="{% url 'dashboard' %}" class="dropdown-item">
+                            <i class="fas fa-chart-line"></i> Dashboard
+                        </a>
+                        <a href="{% url 'profile' %}" class="dropdown-item">
+                            <i class="fas fa-user"></i> Profile
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{% url 'my_progress' %}" class="dropdown-item">
+                            <i class="fas fa-tasks"></i> My Progress
+                        </a>
+                        <a href="{% url 'my_notes' %}" class="dropdown-item">
+                            <i class="fas fa-sticky-note"></i> My Notes
+                        </a>
+                        <a href="{% url 'my_highlights' %}" class="dropdown-item">
+                            <i class="fas fa-highlighter"></i> My Highlights
+                        </a>
+                        <a href="{% url 'my_streaks' %}" class="dropdown-item">
+                            <i class="fas fa-fire"></i> Reading Streaks
+                        </a>
+                        <a href="{% url 'my_achievements' %}" class="dropdown-item">
+                            <i class="fas fa-trophy"></i> Achievements
+                        </a>
+                        <a href="{% url 'reading_lists' %}" class="dropdown-item">
+                            <i class="fas fa-list"></i> Reading Lists
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{% url 'logout' %}" class="dropdown-item">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+                <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Messages -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message message-{{ message.tags }}">
+            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div>
+                <div class="footer-brand">📚 SmartReader</div>
+                <p class="footer-text">
+                    Your personal reading companion. Track progress, take notes, 
+                    highlight important passages, and achieve your reading goals with our 
+                    intelligent reading platform.
+                </p>
+            </div>
+            <div>
+                <h4 class="footer-title">Quick Links</h4>
+                <ul class="footer-links">
+                    <li><a href="{% url 'articles' %}">Browse Articles</a></li>
+                    <li><a href="{% url 'search' %}">Search</a></li>
+                    {% if user.is_authenticated %}
+                    <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'my_bookmarks' %}">Bookmarks</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div>
+                <h4 class="footer-title">Features</h4>
+                <ul class="footer-links">
+                    {% if user.is_authenticated %}
+                    <li><a href="{% url 'my_progress' %}">Reading Progress</a></li>
+                    <li><a href="{% url 'my_highlights' %}">Smart Highlights</a></li>
+                    <li><a href="{% url 'my_notes' %}">Note Taking</a></li>
+                    <li><a href="{% url 'my_achievements' %}">Achievement System</a></li>
+                    {% else %}
+                    <li><a href="{% url 'login' %}">Reading Progress</a></li>
+                    <li><a href="{% url 'login' %}">Smart Highlights</a></li>
+                    <li><a href="{% url 'login' %}">Note Taking</a></li>
+                    <li><a href="{% url 'login' %}">Achievement System</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div>
+                <h4 class="footer-title">Connect</h4>
+                <ul class="footer-links">
+                    <li><a href="https://github.com/sanjaigiri" target="_blank"><i class="fab fa-github"></i> GitHub - sanjaigiri</a></li>
+                    <li><a href="https://twitter.com" target="_blank"><i class="fab fa-twitter"></i> Twitter</a></li>
+                    <li><a href="https://www.linkedin.com/in/sanjai-giri-6a6619306" target="_blank"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 SmartReader. Final Year Project - All Rights Reserved.</p>
+        </div>
+    </footer>
+    
+    <script>
+        // Auto-hide messages after 5 seconds
+        document.querySelectorAll('.message').forEach(msg => {
+            setTimeout(() => {
+                msg.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => msg.remove(), 300);
+            }, 5000);
+        });
+        
+        // CSRF Token for AJAX requests
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        
+        // Search autocomplete
+        const searchInput = document.getElementById('searchInput');
+        const searchSuggestions = document.getElementById('searchSuggestions');
+        let searchTimeout;
+        
+        if (searchInput && searchSuggestions) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
+                    searchSuggestions.classList.remove('active');
+                    return;
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    fetch(`/api/search-suggestions/?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.suggestions && data.suggestions.length > 0) {
+                                searchSuggestions.innerHTML = data.suggestions.map(item => `
+                                    <div class="suggestion-item" onclick="window.location.href='/article/${item.slug}/'">
+                                        <div class="suggestion-title">${item.title}</div>
+                                        ${item.category ? `<div class="suggestion-category">${item.category}</div>` : ''}
+                                        ${item.summary ? `<div class="suggestion-summary">${item.summary}</div>` : ''}
+                                    </div>
+                                `).join('');
+                                searchSuggestions.classList.add('active');
+                            } else {
+                                searchSuggestions.classList.remove('active');
+                            }
+                        })
+                        .catch(err => console.error('Search error:', err));
+                }, 300); // Debounce 300ms
+            });
+            
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+                    searchSuggestions.classList.remove('active');
+                }
+            });
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,601 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero Section */
+    .hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 6rem 2rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    
+    .hero-content {
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .hero h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 1.5rem;
+        line-height: 1.2;
+    }
+    
+    .hero p {
+        font-size: 1.25rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 2rem;
+        line-height: 1.8;
+    }
+    
+    .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .hero .btn {
+        padding: 1rem 2rem;
+        font-size: 1rem;
+    }
+    
+    .btn-white {
+        background: white;
+        color: #667eea;
+    }
+    
+    .btn-white:hover {
+        background: #f8fafc;
+        transform: translateY(-2px);
+    }
+    
+    .btn-ghost {
+        background: transparent;
+        border: 2px solid white;
+        color: white;
+    }
+    
+    .btn-ghost:hover {
+        background: white;
+        color: #667eea;
+    }
+    
+    /* Stats Section */
+    .stats-section {
+        margin-top: -3rem;
+        position: relative;
+        z-index: 10;
+        padding: 0 2rem;
+    }
+    
+    .stats-grid {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .stat-item {
+        background: var(--bg-primary);
+        padding: 2rem;
+        border-radius: var(--radius-lg);
+        text-align: center;
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .stat-item i {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .stat-text {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Features Section */
+    .features-section {
+        padding: 6rem 2rem;
+    }
+    
+    .section-header {
+        text-align: center;
+        max-width: 600px;
+        margin: 0 auto 4rem;
+    }
+    
+    .section-header h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .section-header p {
+        color: var(--text-secondary);
+        font-size: 1.125rem;
+    }
+    
+    .features-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+    
+    .feature-card {
+        background: var(--bg-primary);
+        padding: 2rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        transition: all 0.3s;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--primary);
+    }
+    
+    .feature-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .feature-card h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+    
+    .feature-card p {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        line-height: 1.7;
+    }
+    
+    /* Categories Section */
+    .categories-section {
+        padding: 4rem 2rem;
+        background: var(--bg-tertiary);
+    }
+    
+    .categories-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .category-card {
+        background: var(--bg-primary);
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        text-align: center;
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: all 0.3s;
+        border: 1px solid var(--border);
+    }
+    
+    .category-card:hover {
+        transform: scale(1.05);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .category-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+        color: white;
+    }
+    
+    .category-name {
+        font-weight: 600;
+    }
+    
+    /* Recent Articles */
+    .articles-section {
+        padding: 6rem 2rem;
+    }
+    
+    .articles-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+    
+    .article-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        transition: all 0.3s;
+    }
+    
+    .article-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .article-img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+    }
+    
+    .article-content {
+        padding: 1.5rem;
+    }
+    
+    .article-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+    }
+    
+    .article-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+    }
+    
+    .article-title a {
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .article-title a:hover {
+        color: var(--primary);
+    }
+    
+    .article-summary {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+    
+    .article-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    /* CTA Section */
+    .cta-section {
+        padding: 6rem 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        text-align: center;
+    }
+    
+    .cta-content {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .cta-content h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .cta-content p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.125rem;
+        margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 1024px) {
+        .features-grid,
+        .articles-grid { grid-template-columns: repeat(2, 1fr); }
+        .categories-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 640px) {
+        .hero h1 { font-size: 2.5rem; }
+        .stats-grid,
+        .features-grid,
+        .articles-grid,
+        .categories-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-content">
+        <h1>📚 Read Smarter, Learn Better</h1>
+        <p>
+            Your personal reading companion. Track progress, highlight key insights, 
+            take smart notes, and achieve your reading goals with our intelligent platform.
+        </p>
+        <div class="hero-buttons">
+            {% if user.is_authenticated %}
+            <a href="{% url 'articles' %}" class="btn btn-white">
+                <i class="fas fa-book-open"></i> Browse Articles
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-ghost">
+                <i class="fas fa-chart-line"></i> My Dashboard
+            </a>
+            {% else %}
+            <a href="{% url 'register' %}" class="btn btn-white">
+                <i class="fas fa-rocket"></i> Get Started Free
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-ghost">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats-section">
+    <div class="stats-grid">
+        <div class="stat-item">
+            <i class="fas fa-book"></i>
+            <div class="stat-number">{{ total_articles|default:"0" }}+</div>
+            <div class="stat-text">Articles Available</div>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-users"></i>
+            <div class="stat-number">{{ total_users|default:"0" }}+</div>
+            <div class="stat-text">Active Readers</div>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-check-circle"></i>
+            <div class="stat-number">{{ total_reads|default:"0" }}+</div>
+            <div class="stat-text">Completed Reads</div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+    <div class="section-header">
+        <h2>Powerful Reading Features</h2>
+        <p>Everything you need to become a more effective reader and learner</p>
+    </div>
+    
+    <div class="features-grid">
+        {% if user.is_authenticated %}
+        <a href="{% url 'my_progress' %}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <div class="feature-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Progress Tracking</h3>
+            <p>Track your reading progress automatically. Know exactly where you left off and how much time you've invested.</p>
+        </a>
+        
+        <a href="{% url 'my_highlights' %}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <div class="feature-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent);">
+                <i class="fas fa-highlighter"></i>
+            </div>
+            <h3>Smart Highlights</h3>
+            <p>Highlight important passages with multiple colors. Easily review and export your highlights later.</p>
+        </a>
+        
+        <a href="{% url 'my_notes' %}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <div class="feature-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                <i class="fas fa-sticky-note"></i>
+            </div>
+            <h3>Note Taking</h3>
+            <p>Take contextual notes while reading. Attach notes to specific text passages for better recall.</p>
+        </a>
+        
+        <a href="{% url 'my_streaks' %}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <div class="feature-icon" style="background: rgba(236, 72, 153, 0.1); color: var(--secondary);">
+                <i class="fas fa-fire"></i>
+            </div>
+            <h3>Reading Streaks</h3>
+            <p>Build consistent reading habits with daily streaks. Stay motivated and track your commitment.</p>
+        </a>
+        
+        <a href="{% url 'my_achievements' %}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <div class="feature-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <h3>Achievements</h3>
+            <p>Earn badges and achievements as you read. Gamify your learning journey and celebrate milestones.</p>
+        </a>
+        
+        <a href="{% url 'my_bookmarks' %}" class="feature-card" style="text-decoration: none; color: inherit;">
+            <div class="feature-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                <i class="fas fa-bookmark"></i>
+            </div>
+            <h3>Bookmarks & Lists</h3>
+            <p>Save articles for later and organize them into custom reading lists. Never lose track of what to read next.</p>
+        </a>
+        {% else %}
+        <div class="feature-card" onclick="window.location.href='{% url 'login' %}'" style="cursor: pointer;">
+            <div class="feature-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Progress Tracking</h3>
+            <p>Track your reading progress automatically. Know exactly where you left off and how much time you've invested.</p>
+            <small style="color: var(--primary); margin-top: 0.5rem; display: block;"><i class="fas fa-lock"></i> Login to access</small>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.href='{% url 'login' %}'" style="cursor: pointer;">
+            <div class="feature-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent);">
+                <i class="fas fa-highlighter"></i>
+            </div>
+            <h3>Smart Highlights</h3>
+            <p>Highlight important passages with multiple colors. Easily review and export your highlights later.</p>
+            <small style="color: var(--primary); margin-top: 0.5rem; display: block;"><i class="fas fa-lock"></i> Login to access</small>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.href='{% url 'login' %}'" style="cursor: pointer;">
+            <div class="feature-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                <i class="fas fa-sticky-note"></i>
+            </div>
+            <h3>Note Taking</h3>
+            <p>Take contextual notes while reading. Attach notes to specific text passages for better recall.</p>
+            <small style="color: var(--primary); margin-top: 0.5rem; display: block;"><i class="fas fa-lock"></i> Login to access</small>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.href='{% url 'login' %}'" style="cursor: pointer;">
+            <div class="feature-icon" style="background: rgba(236, 72, 153, 0.1); color: var(--secondary);">
+                <i class="fas fa-fire"></i>
+            </div>
+            <h3>Reading Streaks</h3>
+            <p>Build consistent reading habits with daily streaks. Stay motivated and track your commitment.</p>
+            <small style="color: var(--primary); margin-top: 0.5rem; display: block;"><i class="fas fa-lock"></i> Login to access</small>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.href='{% url 'login' %}'" style="cursor: pointer;">
+            <div class="feature-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <h3>Achievements</h3>
+            <p>Earn badges and achievements as you read. Gamify your learning journey and celebrate milestones.</p>
+            <small style="color: var(--primary); margin-top: 0.5rem; display: block;"><i class="fas fa-lock"></i> Login to access</small>
+        </div>
+        
+        <div class="feature-card" onclick="window.location.href='{% url 'login' %}'" style="cursor: pointer;">
+            <div class="feature-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                <i class="fas fa-bookmark"></i>
+            </div>
+            <h3>Bookmarks & Lists</h3>
+            <p>Save articles for later and organize them into custom reading lists. Never lose track of what to read next.</p>
+            <small style="color: var(--primary); margin-top: 0.5rem; display: block;"><i class="fas fa-lock"></i> Login to access</small>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Categories Section -->
+{% if categories %}
+<section class="categories-section">
+    <div class="section-header">
+        <h2>Explore Categories</h2>
+        <p>Find articles that match your interests</p>
+    </div>
+    
+    <div class="categories-grid">
+        {% for category in categories %}
+        <a href="{% url 'articles' %}?category={{ category.slug }}" class="category-card">
+            <div class="category-icon" style="background: {{ category.color }};">
+                <i class="fas {{ category.icon }}"></i>
+            </div>
+            <div class="category-name">{{ category.name }}</div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Recent Articles Section -->
+{% if recent_articles %}
+<section class="articles-section">
+    <div class="section-header">
+        <h2>Latest Articles</h2>
+        <p>Start reading our newest content</p>
+    </div>
+    
+    <div class="articles-grid">
+        {% for article in recent_articles %}
+        <div class="article-card">
+            {% if article.cover_image %}
+            <img src="{{ article.cover_image.url }}" alt="{{ article.title }}" class="article-img">
+            {% else %}
+            <div class="article-img" style="display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-book" style="font-size: 3rem; color: white;"></i>
+            </div>
+            {% endif %}
+            <div class="article-content">
+                <div class="article-meta">
+                    {% if article.category %}
+                    <span class="badge badge-primary">{{ article.category.name }}</span>
+                    {% endif %}
+                    <span><i class="far fa-clock"></i> {{ article.estimated_read_time }} min read</span>
+                </div>
+                <h3 class="article-title">
+                    <a href="{% url 'article_detail' slug=article.slug %}">{{ article.title }}</a>
+                </h3>
+                <p class="article-summary">{{ article.summary|default:article.content|truncatewords:20 }}</p>
+                <div class="article-footer">
+                    <span class="badge badge-{{ article.difficulty }}">{{ article.get_difficulty_display }}</span>
+                    <span style="color: var(--text-muted); font-size: 0.875rem;">
+                        <i class="far fa-eye"></i> {{ article.views_count }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div style="text-align: center; margin-top: 3rem;">
+        <a href="{% url 'articles' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-arrow-right"></i> View All Articles
+        </a>
+    </div>
+</section>
+{% endif %}
+
+<!-- CTA Section -->
+{% if not user.is_authenticated %}
+<section class="cta-section">
+    <div class="cta-content">
+        <h2>Ready to Start Your Reading Journey?</h2>
+        <p>Join thousands of readers who are improving their knowledge every day.</p>
+        <a href="{% url 'register' %}" class="btn btn-white btn-lg">
+            <i class="fas fa-user-plus"></i> Create Free Account
+        </a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

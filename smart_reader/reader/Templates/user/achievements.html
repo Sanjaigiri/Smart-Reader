@@ -1,0 +1,490 @@
+{% extends 'base.html' %}
+
+{% block title %}My Achievements{% endblock %}
+
+{% block extra_css %}
+<style>
+    .achievements-header {
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, #ef4444 0%, #fbbf24 100%);
+        color: white;
+    }
+    
+    .achievements-header-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .achievements-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .achievements-content {
+        max-width: 1200px;
+        margin: -2rem auto 0;
+        padding: 0 2rem 2rem;
+        position: relative;
+        z-index: 10;
+    }
+    
+    /* Main Badge Card */
+    .badge-showcase {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        padding: 3rem;
+        text-align: center;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-xl);
+        border: 3px solid {{ badge_color }};
+    }
+    
+    .badge-icon {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, {{ badge_color }}, {{ badge_color }}dd);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-size: 3rem;
+        color: white;
+        box-shadow: 0 10px 40px {{ badge_color }}66;
+    }
+    
+    .badge-title {
+        font-size: 2rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: {{ badge_color }};
+        margin-bottom: 0.5rem;
+    }
+    
+    .badge-description {
+        color: var(--text-secondary);
+        font-size: 1.125rem;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin: 2rem 0;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+    
+    /* Badge Levels */
+    .badge-levels {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .levels-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+    }
+    
+    .level-card {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        border-radius: var(--radius);
+        background: var(--bg-tertiary);
+        opacity: 0.5;
+        transition: all 0.3s;
+    }
+    
+    .level-card.active {
+        opacity: 1;
+        transform: scale(1.05);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .level-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .level-name {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .level-requirement {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+    
+    /* Achievements Grid */
+    .achievements-section {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .achievements-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .achievement-card {
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--bg-tertiary);
+        text-align: center;
+        transition: all 0.3s;
+        position: relative;
+    }
+    
+    .achievement-card.earned {
+        background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1));
+        border-color: var(--accent);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+    
+    .achievement-card.locked {
+        opacity: 0.5;
+    }
+    
+    .achievement-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+    }
+    
+    .achievement-name {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .achievement-description {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+    }
+    
+    .achievement-benefit {
+        display: inline-block;
+        margin-top: 0.5rem;
+        padding: 0.4rem 0.8rem;
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .earned-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 24px;
+        height: 24px;
+        background: var(--success);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+    }
+    
+    /* Benefits Section */
+    .benefits-section {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .benefits-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .benefit-card {
+        background: var(--bg-primary);
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        display: flex;
+        gap: 1rem;
+        align-items: start;
+    }
+    
+    .benefit-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .benefit-content h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .benefit-content p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    @media (max-width: 768px) {
+        .stats-row { grid-template-columns: 1fr; }
+        .levels-grid { grid-template-columns: repeat(3, 1fr); }
+        .achievements-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="achievements-header">
+    <div class="achievements-header-content">
+        <h1><i class="fas fa-trophy"></i> My Achievements</h1>
+        <p>Celebrate your reading milestones and earn badges!</p>
+    </div>
+</section>
+
+<div class="achievements-content">
+    <!-- Main Badge Showcase -->
+    <div class="badge-showcase">
+        <div class="badge-icon">
+            {% if badge_level == 'platinum' %}🏆
+            {% elif badge_level == 'gold' %}🥇
+            {% elif badge_level == 'silver' %}🥈
+            {% elif badge_level == 'bronze' %}🥉
+            {% else %}📚{% endif %}
+        </div>
+        <div class="badge-title">
+            {% if badge_level == 'none' %}Beginner Reader
+            {% else %}{{ badge_level|title }} Reader{% endif %}
+        </div>
+        <div class="badge-description">
+            {% if badge_level == 'none' %}Start your reading journey to earn badges!
+            {% elif badge_level == 'bronze' %}You've shown commitment with 7+ reading days!
+            {% elif badge_level == 'silver' %}Amazing! 30+ days of consistent reading!
+            {% elif badge_level == 'gold' %}Outstanding! 90+ days - You're a true scholar!
+            {% elif badge_level == 'platinum' %}LEGENDARY! 150+ days of reading mastery!
+            {% endif %}
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-number">{{ completed_articles }}</div>
+                <div class="stat-label">Articles Completed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ streak_days }}</div>
+                <div class="stat-label">Total Reading Days</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ user_achievements|length }}</div>
+                <div class="stat-label">Achievements Earned</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Badge Levels -->
+    <div class="badge-levels">
+        <h2 class="section-title">
+            <i class="fas fa-medal" style="color: var(--accent);"></i>
+            Badge Progression
+        </h2>
+        
+        <div class="levels-grid">
+            <div class="level-card {% if badge_level == 'none' %}active{% endif %}" style="{% if badge_level == 'none' %}border: 2px solid #9ca3af;{% endif %}">
+                <div class="level-icon">📚</div>
+                <div class="level-name">Beginner</div>
+                <div class="level-requirement">Start reading</div>
+            </div>
+            <div class="level-card {% if badge_level == 'bronze' %}active{% endif %}" style="{% if badge_level == 'bronze' %}border: 2px solid #cd7f32;{% endif %}">
+                <div class="level-icon">🥉</div>
+                <div class="level-name">Bronze</div>
+                <div class="level-requirement">7+ days</div>
+            </div>
+            <div class="level-card {% if badge_level == 'silver' %}active{% endif %}" style="{% if badge_level == 'silver' %}border: 2px solid #c0c0c0;{% endif %}">
+                <div class="level-icon">🥈</div>
+                <div class="level-name">Silver</div>
+                <div class="level-requirement">30+ days</div>
+            </div>
+            <div class="level-card {% if badge_level == 'gold' %}active{% endif %}" style="{% if badge_level == 'gold' %}active{% endif %}" style="{% if badge_level == 'gold' %}border: 2px solid #fbbf24;{% endif %}">
+                <div class="level-icon">🥇</div>
+                <div class="level-name">Gold</div>
+                <div class="level-requirement">90+ days</div>
+            </div>
+            <div class="level-card {% if badge_level == 'platinum' %}active{% endif %}" style="{% if badge_level == 'platinum' %}border: 2px solid #e5e4e2;{% endif %}">
+                <div class="level-icon">🏆</div>
+                <div class="level-name">Platinum</div>
+                <div class="level-requirement">150+ days</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Achievement Benefits -->
+    <div class="benefits-section">
+        <h2 class="section-title">
+            <i class="fas fa-gift" style="color: var(--primary);"></i>
+            Achievement Benefits & Rewards
+        </h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Unlock exclusive benefits as you earn achievements and level up your reader badge!</p>
+        
+        <div class="benefits-grid">
+            <div class="benefit-card">
+                <div class="benefit-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <div class="benefit-content">
+                    <h3>Priority Access</h3>
+                    <p>Get early access to new articles and features. Gold & Platinum readers see content first!</p>
+                </div>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="benefit-icon">
+                    <i class="fas fa-certificate"></i>
+                </div>
+                <div class="benefit-content">
+                    <h3>Profile Badge</h3>
+                    <p>Display your achievement badges on your profile. Show off your reading dedication!</p>
+                </div>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="benefit-icon">
+                    <i class="fas fa-download"></i>
+                </div>
+                <div class="benefit-content">
+                    <h3>Unlimited Downloads</h3>
+                    <p>Download articles as PDF for offline reading. Available for Bronze readers and above!</p>
+                </div>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="benefit-icon">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div class="benefit-content">
+                    <h3>Custom Reading Lists</h3>
+                    <p>Create unlimited reading lists to organize your favorite articles and topics.</p>
+                </div>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="benefit-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="benefit-content">
+                    <h3>Advanced Analytics</h3>
+                    <p>Track detailed reading stats, trends, and insights. See how you compare to others!</p>
+                </div>
+            </div>
+            
+            <div class="benefit-card">
+                <div class="benefit-icon">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <div class="benefit-content">
+                    <h3>Leaderboard Ranking</h3>
+                    <p>Compete with other readers on the global leaderboard. Platinum readers get special recognition!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- All Achievements -->
+    {% if all_achievements %}
+    <div class="achievements-section">
+        <h2 class="section-title">
+            <i class="fas fa-star" style="color: var(--accent);"></i>
+            All Achievements ({{ user_achievements|length }}/{{ all_achievements|length }})
+        </h2>
+        
+        <div class="achievements-grid">
+            {% for achievement in all_achievements %}
+            <div class="achievement-card {% if achievement.id in earned_ids %}earned{% else %}locked{% endif %}">
+                {% if achievement.id in earned_ids %}
+                <div class="earned-badge"><i class="fas fa-check"></i></div>
+                {% endif %}
+                <div class="achievement-icon" style="background: {{ achievement.badge_color }}22; color: {{ achievement.badge_color }};">
+                    <i class="fas {{ achievement.icon }}"></i>
+                </div>
+                <div class="achievement-name">{{ achievement.name }}</div>
+                <div class="achievement-description">{{ achievement.description }}</div>
+                
+                {% if achievement.id in earned_ids %}
+                <div class="achievement-benefit">
+                    {% if achievement.requirement_type == 'articles_read' %}
+                    🎁 +{{ achievement.requirement_value|floatformat:0 }}% XP Bonus
+                    {% elif achievement.requirement_type == 'streak_days' %}
+                    🔥 {{ achievement.requirement_value }} Day Streak Bonus
+                    {% elif achievement.requirement_type == 'time_spent' %}
+                    ⏱️ {{ achievement.requirement_value|floatformat:0 }}h Reading Reward
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="margin-top: 0.5rem; padding: 0.4rem 0.8rem; background: rgba(239, 68, 68, 0.1); color: var(--danger); border-radius: 50px; font-size: 0.75rem; font-weight: 600;">
+                    <i class="fas fa-lock"></i> Locked
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

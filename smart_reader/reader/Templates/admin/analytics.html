@@ -1,0 +1,516 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --admin-sidebar: #1e1e2d;
+        --admin-sidebar-hover: #2a2a3d;
+        --admin-accent: #6366f1;
+    }
+    
+    .admin-layout {
+        display: flex;
+        min-height: calc(100vh - 70px);
+    }
+    
+    /* Sidebar */
+    .admin-sidebar {
+        width: 260px;
+        background: var(--admin-sidebar);
+        padding: 1.5rem 0;
+        position: sticky;
+        top: 70px;
+        height: calc(100vh - 70px);
+        overflow-y: auto;
+    }
+    
+    .admin-logo {
+        padding: 0 1.5rem 1.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .admin-logo h2 {
+        color: white;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .admin-logo h2 i {
+        color: var(--admin-accent);
+    }
+    
+    .admin-logo small {
+        display: block;
+        color: rgba(255,255,255,0.5);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    
+    .admin-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .admin-menu-section {
+        padding: 0.75rem 1.5rem 0.5rem;
+        color: rgba(255,255,255,0.4);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+    
+    .admin-menu a {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        color: rgba(255,255,255,0.7);
+        text-decoration: none;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+    }
+    
+    .admin-menu a:hover {
+        background: var(--admin-sidebar-hover);
+        color: white;
+    }
+    
+    .admin-menu a.active {
+        background: var(--admin-sidebar-hover);
+        color: white;
+        border-left-color: var(--admin-accent);
+    }
+    
+    .admin-menu a i {
+        width: 20px;
+        text-align: center;
+    }
+    
+    @media (max-width: 768px) {
+        .admin-sidebar { display: none; }
+    }
+    
+    /* Main Content */
+    .admin-main {
+        flex: 1;
+        padding: 2rem;
+        background: var(--bg-secondary);
+    }
+    
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .admin-header h1 {
+        font-size: 1.75rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    /* Period Filter */
+    .period-filter {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        padding: 0.5rem;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        width: fit-content;
+    }
+    
+    .period-btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+    }
+    
+    .period-btn:hover,
+    .period-btn.active {
+        background: var(--admin-accent);
+        color: white;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 1200px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 600px) {
+        .stats-grid { grid-template-columns: 1fr; }
+    }
+    
+    .stat-card {
+        background: var(--bg-primary);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border);
+    }
+    
+    .stat-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .stat-icon.readers { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+    .stat-icon.completed { background: linear-gradient(135deg, #10b981, #34d399); color: white; }
+    .stat-icon.visits { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: white; }
+    .stat-icon.views { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1;
+    }
+    
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    /* Charts */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 1200px) {
+        .charts-grid { grid-template-columns: 1fr; }
+    }
+    
+    .chart-card {
+        background: var(--bg-primary);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border);
+    }
+    
+    .chart-card.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .chart-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .chart-container {
+        height: 300px;
+    }
+    
+    /* Tables */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .data-table th {
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+    
+    .data-table tbody tr:hover {
+        background: var(--bg-secondary);
+    }
+    
+    .rank {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .rank.gold { background: #fef3c7; color: #d97706; }
+    .rank.silver { background: #e5e7eb; color: #6b7280; }
+    .rank.bronze { background: #fed7aa; color: #ea580c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="admin-logo">
+            <h2><i class="fas fa-shield-alt"></i> Admin Panel</h2>
+            <small>SmartReader Management</small>
+        </div>
+        
+        <ul class="admin-menu">
+            <li class="admin-menu-section">Main</li>
+            <li><a href="{% url 'admin_dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="{% url 'admin_analytics' %}" class="active"><i class="fas fa-chart-line"></i> Analytics</a></li>
+            
+            <li class="admin-menu-section">Content Management</li>
+            <li><a href="{% url 'admin_articles' %}"><i class="fas fa-newspaper"></i> All Articles</a></li>
+            <li><a href="{% url 'admin_add_article' %}"><i class="fas fa-plus-circle"></i> Add New Article</a></li>
+            
+            <li class="admin-menu-section">User Management</li>
+            <li><a href="{% url 'admin_users' %}"><i class="fas fa-users"></i> All Users</a></li>
+            
+            <li class="admin-menu-section">System</li>
+            <li><a href="{% url 'home' %}"><i class="fas fa-globe"></i> View Website</a></li>
+            <li><a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1><i class="fas fa-chart-bar"></i> Analytics Dashboard</h1>
+        </div>
+        
+        <!-- Period Filter -->
+        <div class="period-filter">
+            <a href="?period=7" class="period-btn {% if period == '7' %}active{% endif %}">Last 7 Days</a>
+            <a href="?period=14" class="period-btn {% if period == '14' %}active{% endif %}">Last 14 Days</a>
+            <a href="?period=30" class="period-btn {% if period == '30' %}active{% endif %}">Last 30 Days</a>
+            <a href="?period=90" class="period-btn {% if period == '90' %}active{% endif %}">Last 90 Days</a>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ active_readers }}</div>
+                        <div class="stat-label">Active Readers</div>
+                    </div>
+                    <div class="stat-icon readers"><i class="fas fa-users"></i></div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ completed_articles }}</div>
+                        <div class="stat-label">Articles Completed</div>
+                    </div>
+                    <div class="stat-icon completed"><i class="fas fa-check-circle"></i></div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ total_visits|default:0 }}</div>
+                        <div class="stat-label">Total Visits</div>
+                    </div>
+                    <div class="stat-icon visits"><i class="fas fa-chart-line"></i></div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ total_article_views|default:0 }}</div>
+                        <div class="stat-label">Article Views</div>
+                    </div>
+                    <div class="stat-icon views"><i class="fas fa-eye"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card full-width">
+                <h3 class="chart-title"><i class="fas fa-chart-line"></i> Daily Visits & Users</h3>
+                <div class="chart-container">
+                    <canvas id="visitsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <h3 class="chart-title"><i class="fas fa-fire"></i> Top Articles by Views</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Article</th>
+                            <th>Views</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in article_views %}
+                        <tr>
+                            <td>
+                                <span class="rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                                    {{ forloop.counter }}
+                                </span>
+                            </td>
+                            <td>{{ item.article__title|truncatewords:4 }}</td>
+                            <td>{{ item.views }}</td>
+                            <td>{{ item.total_time|default:0 }}s</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="chart-card">
+                <h3 class="chart-title"><i class="fas fa-folder"></i> Category Performance</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Articles</th>
+                            <th>Views</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cat in category_stats %}
+                        <tr>
+                            <td>{{ cat.category__name|default:"Uncategorized" }}</td>
+                            <td>{{ cat.count }}</td>
+                            <td>{{ cat.views|default:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Daily Visits Chart
+    const visitsData = {{ daily_visits|safe }};
+    const ctx = document.getElementById('visitsChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: visitsData.map(d => d.date),
+            datasets: [
+                {
+                    label: 'Total Visits',
+                    data: visitsData.map(d => d.visits),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                },
+                {
+                    label: 'Unique Users',
+                    data: visitsData.map(d => d.unique),
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: '#888'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255,255,255,0.05)'
+                    },
+                    ticks: {
+                        color: '#888'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#888'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
