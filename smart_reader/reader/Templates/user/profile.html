@@ -233,6 +233,18 @@
                 </div>
             </div>
             
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-language"></i> Preferred Language for Articles</label>
+                <select name="language" class="form-control">
+                    {% for code, name in language_choices %}
+                        <option value="{{ code }}" {% if profile.language == code %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+                <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.5rem;">
+                    <i class="fas fa-info-circle"></i> Articles will be automatically translated to your selected language
+                </p>
+            </div>
+            
             <div class="switch-group">
                 <div>
                     <strong>Dark Mode</strong>
@@ -241,7 +253,7 @@
                     </p>
                 </div>
                 <label class="switch">
-                    <input type="checkbox" name="dark_mode" {% if profile.dark_mode %}checked{% endif %}>
+                    <input type="checkbox" name="dark_mode" id="darkModeToggle" {% if profile.dark_mode or profile.theme == 'dark' %}checked{% endif %}>
                     <span class="slider"></span>
                 </label>
             </div>
@@ -265,22 +277,17 @@
         fontSizeValue.textContent = this.value + 'px';
     });
     
-    function confirmLanguageChange() {
-        if (confirm('Do you want to change the language? The page will reload with the new language.')) {
-            document.getElementById('languageForm').submit();
-        } else {
-            // Reset to current value if cancelled
-            location.reload();
-        }
-    }
-    
-    function confirmThemeChange() {
-        if (confirm('Do you want to change the theme? The page will apply the new theme.')) {
-            document.getElementById('themeForm').submit();
-        } else {
-            // Reset to current value if cancelled
-            location.reload();
-        }
+    // Dark mode toggle - apply immediately for preview
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('change', function() {
+            const html = document.documentElement;
+            if (this.checked) {
+                html.setAttribute('data-theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+            }
+        });
     }
 </script>
 {% endblock %}

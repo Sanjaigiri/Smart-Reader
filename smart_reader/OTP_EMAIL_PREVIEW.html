@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartReader OTP Email - Sample Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .preview-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .header h1 {
+            color: #6366f1;
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .email-content {
+            background: #fafafa;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .email-meta {
+            background: #e0e7ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #4338ca;
+        }
+        .email-meta strong {
+            color: #312e81;
+        }
+        .greeting {
+            color: #666;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .message {
+            color: #666;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .otp-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            padding: 30px;
+            border-radius: 12px;
+            letter-spacing: 12px;
+            margin: 30px 0;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            font-family: 'Courier New', monospace;
+        }
+        .expiry {
+            color: #666;
+            margin: 20px 0;
+            font-size: 16px;
+        }
+        .expiry strong {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .footer {
+            color: #999;
+            font-size: 13px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+            text-align: center;
+        }
+        .info-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #92400e;
+            font-size: 16px;
+        }
+        .info-box p {
+            margin: 5px 0;
+            color: #78350f;
+            font-size: 14px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .feature {
+            background: #f0fdf4;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #10b981;
+            font-size: 13px;
+            color: #065f46;
+        }
+        .sample-label {
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <div class="header">
+            <div class="sample-label">📧 EMAIL PREVIEW - SAMPLE</div>
+            <div class="logo">📚</div>
+            <h1>SmartReader</h1>
+        </div>
+
+        <div class="email-meta">
+            <strong>From:</strong> SmartReader &lt;sanjaigiri001@gmail.com&gt;<br>
+            <strong>To:</strong> sanjaigiri001@gmail.com<br>
+            <strong>Subject:</strong> SmartReader - Email Verification OTP<br>
+            <strong>Priority:</strong> High 🔴
+        </div>
+
+        <div class="email-content">
+            <p style="color:#333;font-size:18px;font-weight:bold;margin:20px 0 10px">Your OTP is:</p>
+            
+            <div class="otp-container">
+                842759
+            </div>
+            
+            <p class="expiry">⏰ This code will expire in <strong>10 minutes</strong>.</p>
+            
+            <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #e5e7eb;">
+                <p style="color:#333;font-weight:bold;margin:0 0 15px;font-size:16px">Once verified, you'll have access to:</p>
+                <ul style="color:#555;margin:10px 0;padding-left:20px;line-height:2;">
+                    <li>Track reading progress</li>
+                    <li>Highlight and take notes</li>
+                    <li>Earn achievements and badges</li>
+                </ul>
+            </div>
+            
+            <p style="color:#999;font-size:14px;margin:30px 0 0;text-align:center">- SmartReader</p>
+        </div>
+    </div>
+
+    <div style="max-width: 600px; margin: 30px auto; padding: 20px; background: white; border-radius: 10px;">
+        <h2 style="color: #6366f1; margin-top: 0;">✅ What You'll Receive:</h2>
+        <ul style="color: #666; line-height: 1.8;">
+            <li><strong>Clean, simple design</strong> - no clutter, just essentials</li>
+            <li><strong>6-digit OTP code</strong> in large gradient box</li>
+            <li><strong>Clear message:</strong> "Your OTP is: XXXXXX"</li>
+            <li><strong>Expiry time:</strong> 10 minutes</li>
+            <li><strong>Benefits list:</strong> What you get after verification</li>
+            <li><strong>From SmartReader</strong> - professional branding</li>
+            <li><strong>Instant delivery:</strong> Under 10 seconds ⚡</li>
+        </ul>
+
+        <div style="background: #e0f2fe; padding: 20px; border-radius: 8px; border-left: 4px solid #0284c7; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: #075985;">📧 Email Details:</h3>
+            <p style="margin: 5px 0; color: #0c4a6e;"><strong>Your Email:</strong> sanjaigiri001@gmail.com</p>
+            <p style="margin: 5px 0; color: #0c4a6e;"><strong>OTP Format:</strong> 6 digits (e.g., 842759)</p>
+            <p style="margin: 5px 0; color: #0c4a6e;"><strong>Valid For:</strong> 10 minutes</p>
+            <p style="margin: 5px 0; color: #0c4a6e;"><strong>Delivery Time:</strong> &lt; 10 seconds</p>
+            <p style="margin: 5px 0; color: #0c4a6e;"><strong>Fallback:</strong> Plain text version included</p>
+        </div>
+
+        <div style="background: #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: #166534;">🎯 How to Use Your OTP:</h3>
+            <ol style="color: #166534; line-height: 1.8; margin: 10px 0; padding-left: 20px;">
+                <li>Go to signup page: <code>http://127.0.0.1:8000/register/</code></li>
+                <li>Enter your email: <strong>sanjaigiri001@gmail.com</strong></li>
+                <li>Click <strong>"Send OTP"</strong> button</li>
+                <li>Check your email inbox (also check spam folder)</li>
+                <li>Copy the 6-digit OTP code</li>
+                <li>Paste it in the OTP field on signup page</li>
+                <li>Auto-verification happens when 6 digits entered</li>
+                <li>Complete your registration! ✅</li>
+            </ol>
+        </div>
+
+        <div style="background: #fef3c7; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: #92400e;">⚡ Quick Setup Required:</h3>
+            <p style="color: #78350f; margin: 10px 0;">To start receiving OTPs in your email inbox:</p>
+            <ol style="color: #78350f; margin: 10px 0; padding-left: 20px;">
+                <li>Get Gmail App Password: <a href="https://myaccount.google.com/apppasswords" style="color: #b45309;">myaccount.google.com/apppasswords</a></li>
+                <li>Update <code>.env</code> file with your password</li>
+                <li>Restart Django server</li>
+                <li>Test the signup page</li>
+            </ol>
+            <p style="color: #78350f; margin: 10px 0; font-weight: bold;">⏱️ Setup time: 3-5 minutes</p>
+        </div>
+    </div>
+</body>
+</html>

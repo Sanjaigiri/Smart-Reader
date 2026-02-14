@@ -1,0 +1,397 @@
+/* ========================================
+   MOBILE-FIRST RESPONSIVE DESIGN
+   SmartReader - Works on Phone/Tablet/Laptop
+   ======================================== */
+
+/* ============================================
+   BASE MOBILE STYLES (320px - 480px)
+   ============================================ */
+@media screen and (max-width: 480px) {
+    /* Reset & Typography */
+    * { box-sizing: border-box; }
+    body { 
+        font-size: 14px; 
+        line-height: 1.6;
+        overflow-x: hidden;
+        -webkit-text-size-adjust: 100%;
+    }
+    
+    h1 { font-size: 24px !important; margin-bottom: 15px; }
+    h2 { font-size: 20px !important; margin-bottom: 12px; }
+    h3 { font-size: 18px !important; margin-bottom: 10px; }
+    h4 { font-size: 16px !important; }
+    h5, h6 { font-size: 14px !important; }
+    
+    p { font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
+    
+    /* Container & Layout */
+    .container, .container-fluid { 
+        padding-left: 15px !important; 
+        padding-right: 15px !important;
+        max-width: 100% !important;
+    }
+    
+    .row { margin-left: -10px; margin-right: -10px; }
+    .row > * { padding-left: 10px; padding-right: 10px; }
+    
+    /* Navigation */
+    .navbar { padding: 10px 15px; }
+    .navbar-brand { font-size: 18px !important; }
+    .navbar-toggler { padding: 8px 10px; }
+    .nav-link { 
+        padding: 12px 15px !important; 
+        font-size: 16px;
+    }
+    
+    /* Sidebar - Stack below content on mobile */
+    .sidebar { 
+        width: 100% !important;
+        position: relative !important;
+        margin-bottom: 20px;
+    }
+    
+    /* Buttons - Touch Friendly (min 44px height) */
+    .btn {
+        min-height: 44px;
+        padding: 12px 20px !important;
+        font-size: 16px !important;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .btn-sm { min-height: 38px; padding: 8px 15px !important; }
+    .btn-lg { min-height: 50px; padding: 15px 25px !important; }
+    
+    /* Forms - Touch Optimized */
+    .form-control, 
+    .form-select {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        min-height: 44px;
+        padding: 12px 15px !important;
+    }
+    
+    .form-label { font-size: 14px; margin-bottom: 6px; }
+    
+    textarea.form-control { min-height: 100px; }
+    
+    /* Form Groups - Stack vertically */
+    .input-group { flex-wrap: wrap; }
+    .input-group > * { width: 100%; margin-bottom: 10px; }
+    .input-group .btn { margin-bottom: 0; }
+    
+    /* Cards */
+    .card {
+        margin-bottom: 15px;
+        border-radius: 8px;
+    }
+    
+    .card-body {
+        padding: 15px !important;
+    }
+    
+    .card-title { font-size: 18px !important; }
+    .card-text { font-size: 14px; }
+    
+    /* Tables - Horizontal Scroll */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 15px;
+    }
+    
+    table {
+        font-size: 13px;
+        min-width: 600px; /* Force scroll for wide tables */
+    }
+    
+    /* Images - Responsive */
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    /* Authentication Pages */
+    .auth-container {
+        padding: 20px 15px !important;
+    }
+    
+    .auth-card {
+        padding: 20px !important;
+        margin: 0 !important;
+    }
+    
+    /* Dashboard Stats */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 15px !important;
+        text-align: center;
+    }
+    
+    .stat-card h3 { font-size: 24px !important; }
+    .stat-card p { font-size: 12px; }
+    
+    /* Charts - Responsive */
+    canvas {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 250px !important;
+        margin-bottom: 20px;
+    }
+    
+    /* Articles List */
+    .article-card {
+        margin-bottom: 15px;
+    }
+    
+    .article-card img {
+        height: 150px;
+        object-fit: cover;
+    }
+    
+    /* Modals */
+    .modal-dialog {
+        margin: 10px !important;
+        max-width: calc(100% - 20px) !important;
+    }
+    
+    .modal-body { padding: 15px !important; }
+    
+    /* Alerts */
+    .alert {
+        padding: 12px 15px !important;
+        font-size: 14px;
+    }
+    
+    /* Pagination */
+    .pagination {
+        font-size: 14px;
+    }
+    
+    .page-link {
+        padding: 8px 12px !important;
+    }
+    
+    /* Badges */
+    .badge {
+        font-size: 12px !important;
+        padding: 4px 8px !important;
+    }
+    
+    /* Spacing Utilities - Reduce for mobile */
+    .py-5 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+    .my-5 { margin-top: 2rem !important; margin-bottom: 2rem !important; }
+    .py-4 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+    .my-4 { margin-top: 1.5rem !important; margin-bottom: 1.5rem !important; }
+    
+    /* Hide desktop-only elements */
+    .d-mobile-none { display: none !important; }
+    
+    /* Reading Page */
+    .article-content {
+        font-size: 16px;
+        line-height: 1.8;
+        padding: 15px;
+    }
+    
+    .translation-controls {
+        position: sticky;
+        top: 0;
+        background: white;
+        padding: 10px;
+        z-index: 100;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+}
+
+/* ============================================
+   LARGE MOBILE (481px - 767px)
+   ============================================ */
+@media screen and (min-width: 481px) and (max-width: 767px) {
+    body { font-size: 15px; }
+    h1 { font-size: 28px !important; }
+    h2 { font-size: 22px !important; }
+    
+    .container { padding: 0 20px !important; }
+    
+    /* Stats Grid - 3 columns */
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+    
+    /* Buttons can be inline */
+    .btn-group-mobile {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-group-mobile .btn {
+        width: auto;
+        flex: 1;
+    }
+    
+    .chart-container {
+        height: 300px !important;
+    }
+}
+
+/* ============================================
+   TABLET (768px - 1024px)
+   ============================================ */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    body { font-size: 16px; }
+    h1 { font-size: 32px !important; }
+    h2 { font-size: 26px !important; }
+    
+    .container { max-width: 720px !important; }
+    
+    /* Sidebar - Collapsible */
+    .sidebar {
+        width: 250px;
+        position: relative;
+    }
+    
+    .sidebar.collapsed {
+        width: 60px;
+    }
+    
+    /* Stats Grid - 4 columns */
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+    
+    /* Forms - Side by side where appropriate */
+    .form-row-tablet {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .form-row-tablet > * {
+        flex: 1;
+    }
+    
+    .chart-container {
+        height: 350px !important;
+    }
+}
+
+/* ============================================
+   DESKTOP (1025px+)
+   ============================================ */
+@media screen and (min-width: 1025px) {
+    .container { max-width: 1200px !important; }
+    
+    /* Full layout */
+    .sidebar {
+        width: 280px;
+        position: sticky;
+        top: 0;
+    }
+    
+    .chart-container {
+        height: 400px !important;
+    }
+    
+    /* Hide mobile-only elements */
+    .d-desktop-none { display: none !important; }
+}
+
+/* ============================================
+   LANDSCAPE ORIENTATION
+   ============================================ */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+    /* Reduce vertical spacing */
+    .navbar { padding: 5px 15px; }
+    .py-5 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+    .my-5 { margin-top: 1rem !important; margin-bottom: 1rem !important; }
+    
+    .chart-container {
+        height: 200px !important;
+    }
+}
+
+/* ============================================
+   DARK MODE COMPATIBILITY
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+    .translation-controls {
+        background: #1a1a1a;
+        color: #fff;
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY - TOUCH TARGETS
+   ============================================ */
+@media (hover: none) and (pointer: coarse) {
+    /* Touch devices */
+    .btn, .nav-link, .form-control, .form-select {
+        min-height: 44px; /* Apple guidelines */
+    }
+    
+    /* Larger tap areas */
+    a, button {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+    .navbar, .sidebar, .footer, .btn, .pagination {
+        display: none !important;
+    }
+    
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    body { font-size: 12pt; }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Show/Hide based on device */
+.mobile-only { display: none; }
+.tablet-only { display: none; }
+.desktop-only { display: block; }
+
+@media screen and (max-width: 767px) {
+    .mobile-only { display: block !important; }
+    .desktop-only { display: none !important; }
+}
+
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    .tablet-only { display: block !important; }
+    .mobile-only { display: none !important; }
+}
+
+/* Responsive Text Alignment */
+@media screen and (max-width: 767px) {
+    .text-mobile-center { text-align: center !important; }
+    .text-mobile-left { text-align: left !important; }
+}
+
+/* Responsive Margins */
+.mb-mobile-3 { margin-bottom: 1rem; }
+@media screen and (min-width: 768px) {
+    .mb-mobile-3 { margin-bottom: 0; }
+}

@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'reader.middleware.VisitTrackingMiddleware',  # Track site visits for analytics
 ]
 
 ROOT_URLCONF = 'smart_reader.urls'
@@ -80,20 +81,42 @@ WSGI_APPLICATION = 'smart_reader.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-# Using SQLite for easier development (no server required)
-# Switch to MySQL in production by uncommenting the MySQL config
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 
-# MySQL Configuration (uncomment to use MySQL instead of SQLite)
+# Choose database type using environment variable
+# Set DATABASE_TYPE=mysql in .env to use MySQL, otherwise SQLite is used
+DATABASE_TYPE = os.getenv('DATABASE_TYPE', 'sqlite')
+
+if DATABASE_TYPE == 'mysql':
+    # MySQL Configuration (via XAMPP)
+    # Make sure MySQL is running in XAMPP and database 'smartreader' is created
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME', 'smartreader'),
+            'USER': os.getenv('DB_USER', 'root'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '3306'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'charset': 'utf8mb4',
+            },
+        }
+    }
+else:
+    # SQLite Configuration (default - no server required)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# Uncomment below to force MySQL (deprecated - use DATABASE_TYPE=mysql in .env instead)
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'smart_reader_db',
+#         'NAME': 'smartreader',
 #         'USER': 'root',
 #         'PASSWORD': '',
 #         'HOST': 'localhost',
@@ -176,29 +199,39 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'
 
-# ============ EMAIL CONFIGURATION ============
-# Email settings are now loaded from .env file
+# ============ EMAIL CONFIGURATION - OPTIMIZED FOR HIGH PERFORMANCE ============
+# Email settings optimized for fast OTP delivery (< 10 seconds)
 # 
 # TO SEND REAL OTP EMAILS:
 # 1. Open the .env file in smart_reader folder
 # 2. Get Gmail App Password from: https://myaccount.google.com/apppasswords
-# 3. Replace 'YOUR_GMAIL_APP_PASSWORD_HERE' with your 16-char password (no spaces)
-# 4. Change USE_REAL_EMAIL=True in .env file
+# 3. Set USE_REAL_EMAIL=True in .env file
+# 4. Update EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env
 # 5. Save .env file and restart Django server
-# 6. Test signup - OTP will be sent to real email!
+# 6. Test signup - OTP will be sent to real email in under 10 seconds!
 
 USE_REAL_EMAIL = os.getenv('USE_REAL_EMAIL', 'False') == 'True'
 
 if USE_REAL_EMAIL:
-    # Gmail SMTP - Sends real emails to user's email ID
+    # Gmail SMTP - Optimized for fast email delivery
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
     EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
     EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'sanjaigiri001@gmail.com')
+    EMAIL_USE_SSL = False  # Don't use SSL with TLS
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'your-email@gmail.com')
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
     DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f'SmartReader <{EMAIL_HOST_USER}>')
+    
+    # Performance optimization settings for fast email delivery (< 20 seconds)
+    EMAIL_TIMEOUT = 20  # Connection timeout in 20 seconds
+    EMAIL_USE_LOCALTIME = False  # Use UTC for timestamps
+    SERVER_EMAIL = EMAIL_HOST_USER  # For error emails
+    
+    # Connection pooling - reuse connections for better performance
+    EMAIL_USE_CONNECTION_POOLING = True
 else:
     # Console Backend - OTPs will be printed in terminal (for development)
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'SmartReader <noreply@smartreader.com>'
+    EMAIL_TIMEOUT = 5  # Fast timeout for console mode

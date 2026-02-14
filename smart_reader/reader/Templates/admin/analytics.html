@@ -157,6 +157,10 @@
         margin-bottom: 2rem;
     }
     
+    @media (max-width: 1400px) {
+        .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    
     @media (max-width: 1200px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
@@ -331,10 +335,50 @@
             <div class="stat-card">
                 <div class="stat-card-header">
                     <div>
+                        <div class="stat-value">{{ total_users }}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-icon readers"><i class="fas fa-users"></i></div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ active_users }}</div>
+                        <div class="stat-label">Active Users (Period)</div>
+                    </div>
+                    <div class="stat-icon visits"><i class="fas fa-user-check"></i></div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ new_users }}</div>
+                        <div class="stat-label">New Registrations</div>
+                    </div>
+                    <div class="stat-icon completed"><i class="fas fa-user-plus"></i></div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ total_visits|default:0 }}</div>
+                        <div class="stat-label">Total Visits</div>
+                    </div>
+                    <div class="stat-icon views"><i class="fas fa-chart-line"></i></div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
                         <div class="stat-value">{{ active_readers }}</div>
                         <div class="stat-label">Active Readers</div>
                     </div>
-                    <div class="stat-icon readers"><i class="fas fa-users"></i></div>
+                    <div class="stat-icon readers"><i class="fas fa-book-reader"></i></div>
                 </div>
             </div>
             
@@ -351,20 +395,20 @@
             <div class="stat-card">
                 <div class="stat-card-header">
                     <div>
-                        <div class="stat-value">{{ total_visits|default:0 }}</div>
-                        <div class="stat-label">Total Visits</div>
+                        <div class="stat-value">{{ total_article_views|default:0 }}</div>
+                        <div class="stat-label">Article Views</div>
                     </div>
-                    <div class="stat-icon visits"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-icon views"><i class="fas fa-eye"></i></div>
                 </div>
             </div>
             
             <div class="stat-card">
                 <div class="stat-card-header">
                     <div>
-                        <div class="stat-value">{{ total_article_views|default:0 }}</div>
-                        <div class="stat-label">Article Views</div>
+                        <div class="stat-value">{{ avg_reading_time|floatformat:0 }}s</div>
+                        <div class="stat-label">Avg Reading Time/User</div>
                     </div>
-                    <div class="stat-icon views"><i class="fas fa-eye"></i></div>
+                    <div class="stat-icon visits"><i class="fas fa-clock"></i></div>
                 </div>
             </div>
         </div>
@@ -375,6 +419,13 @@
                 <h3 class="chart-title"><i class="fas fa-chart-line"></i> Daily Visits & Users</h3>
                 <div class="chart-container">
                     <canvas id="visitsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card full-width">
+                <h3 class="chart-title"><i class="fas fa-user-plus"></i> Daily User Registrations</h3>
+                <div class="chart-container">
+                    <canvas id="registrationsChart"></canvas>
                 </div>
             </div>
             
@@ -404,6 +455,36 @@
                         {% empty %}
                         <tr>
                             <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="chart-card">
+                <h3 class="chart-title"><i class="fas fa-crown"></i> Top Active Users</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Username</th>
+                            <th>Visits</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in top_users %}
+                        <tr>
+                            <td>
+                                <span class="rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                                    {{ forloop.counter }}
+                                </span>
+                            </td>
+                            <td>{{ user.user__username }}</td>
+                            <td>{{ user.visit_count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No data available</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -499,6 +580,59 @@
                     },
                     ticks: {
                         color: '#888'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#888'
+                    }
+                }
+            }
+        }
+    });
+    
+    // User Registrations Chart
+    const registrationsData = {{ daily_registrations|safe }};
+    const ctx2 = document.getElementById('registrationsChart').getContext('2d');
+    
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: registrationsData.map(d => d.date),
+            datasets: [
+                {
+                    label: 'New Registrations',
+                    data: registrationsData.map(d => d.registrations),
+                    backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                    borderColor: '#6366f1',
+                    borderWidth: 1,
+                    borderRadius: 8
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: '#888'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255,255,255,0.05)'
+                    },
+                    ticks: {
+                        color: '#888',
+                        stepSize: 1
                     }
                 },
                 x: {

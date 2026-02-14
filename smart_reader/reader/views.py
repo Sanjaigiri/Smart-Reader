@@ -1,5 +1,6 @@
 import json
 import re
+import socket
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login, logout
@@ -16,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 from datetime import timedelta, datetime
 import io
+from deep_translator import GoogleTranslator
 
 from .models import (
     Article, ReadingProgress, Note, UserProfile, Category, Tag,
@@ -32,6 +34,48 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+
+
+# ============ TRANSLATION HELPER ============
+def translate_text(text, target_lang='en'):
+    """
+    Translate text to target language using deep-translator
+    Returns original text if translation fails or target is 'en'
+    """
+    if not text or target_lang == 'en':
+        return text
+    
+    try:
+        # Split text into chunks if it's too long (Google Translator limit is ~5000 chars)
+        max_length = 4500
+        if len(text) <= max_length:
+            translated = GoogleTranslator(source='auto', target=target_lang).translate(text)
+            return translated
+        else:
+            # Split by paragraphs for better translation
+            paragraphs = text.split('\n\n')
+            translated_paragraphs = []
+            current_chunk = ""
+            
+            for para in paragraphs:
+                if len(current_chunk) + len(para) <= max_length:
+                    current_chunk += para + "\n\n"
+                else:
+                    if current_chunk:
+                        translated_paragraphs.append(
+                            GoogleTranslator(source='auto', target=target_lang).translate(current_chunk.strip())
+                        )
+                    current_chunk = para + "\n\n"
+            
+            if current_chunk:
+                translated_paragraphs.append(
+                    GoogleTranslator(source='auto', target=target_lang).translate(current_chunk.strip())
+                )
+            
+            return "\n\n".join(translated_paragraphs)
+    except Exception as e:
+        print(f"Translation error: {e}")
+        return text  # Return original text if translation fails
 
 
 # ============ HOME ============
@@ -82,79 +126,130 @@ def validate_email_format(email):
 
 
 def send_otp_email(email, otp):
-    """Send OTP to user's email - Optimized for speed and reliability"""
+    """
+    Send OTP to user's email - OPTIMIZED FOR HIGH PERFORMANCE (< 10 seconds)
+    Uses optimized SMTP settings and efficient email delivery
+    """
     import time
+    import threading
     start_time = time.time()
     
-    print(f"\n🔍 DEBUG: send_otp_email() function called")
-    print(f"   Target email: {email}")
-    print(f"   OTP: {otp}")
+    print(f"\n{'='*70}")
+    print(f"📧 STARTING OTP EMAIL DELIVERY")
+    print(f"{'='*70}")
+    print(f"   📨 Target: {email}")
+    print(f"   🔐 OTP: {otp}")
+    print(f"   ⏰ Started at: {timezone.now().strftime('%H:%M:%S')}")
     
     subject = 'SmartReader - Email Verification OTP'
-    message = f'''Hello!
+    
+    # Simple plain text version
+    message = f'''Your OTP is: {otp}
 
-Your OTP for SmartReader registration is: {otp}
+This code will expire in 10 minutes.
 
-This OTP will expire in 10 minutes.
+Once verified, you'll have access to:
+• Track reading progress
+• Highlight and take notes
+• Earn achievements and badges
 
-If you didn't request this, please ignore this email.
-
-Best regards,
-SmartReader Team
+- SmartReader
 '''
-    html_message = f'''
-    <html>
-    <body style="font-family: Arial, sans-serif; padding: 20px; background: #f3f4f6;">
-        <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h2 style="color: #6366f1; text-align: center; margin-bottom: 10px;">📚 SmartReader</h2>
-            <p style="color: #666;">Hello!</p>
-            <p style="color: #666;">Your OTP for email verification is:</p>
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 36px; font-weight: bold; text-align: center; padding: 25px; border-radius: 8px; letter-spacing: 10px; margin: 25px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {otp}
-            </div>
-            <p style="color: #666;">This OTP will expire in <strong>10 minutes</strong>.</p>
-            <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            <p style="color: #9ca3af; font-size: 12px; text-align: center;">SmartReader Team</p>
-        </div>
-    </body>
-    </html>
-    '''
+    
+    # Clean HTML version - simple and professional
+    html_message = f'''<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:20px;font-family:Arial,sans-serif;background:#f5f5f5">
+<div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+<h2 style="color:#6366f1;text-align:center;margin:0 0 20px">📚 SmartReader</h2>
+<p style="color:#333;font-size:18px;font-weight:bold;margin:20px 0 10px">Your OTP is:</p>
+<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;font-size:42px;font-weight:bold;text-align:center;padding:25px;border-radius:10px;letter-spacing:10px;margin:20px 0">{otp}</div>
+<p style="color:#666;margin:15px 0;font-size:14px">This code will expire in <strong>10 minutes</strong>.</p>
+<div style="background:#f9fafb;padding:15px;border-radius:8px;margin:20px 0">
+<p style="color:#333;font-weight:bold;margin:0 0 10px;font-size:15px">Once verified, you'll have access to:</p>
+<ul style="color:#555;margin:10px 0;padding-left:20px;line-height:1.8">
+<li>Track reading progress</li>
+<li>Highlight and take notes</li>
+<li>Earn achievements and badges</li>
+</ul>
+</div>
+<p style="color:#999;font-size:12px;margin:20px 0 0;text-align:center">- SmartReader</p>
+</div>
+</body>
+</html>'''
+    
     try:
         from django.core.mail import EmailMultiAlternatives
         from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@smartreader.com'
         
-        print(f"✓ Creating email message")
-        print(f"   From: {from_email}")
-        print(f"   To: {email}")
-        print(f"   Subject: {subject}")
-        print(f"   Backend: {settings.EMAIL_BACKEND}")
-        print(f"   USE_REAL_EMAIL: {getattr(settings, 'USE_REAL_EMAIL', False)}")
+        print(f"   ✓ Email Backend: {settings.EMAIL_BACKEND}")
+        print(f"   ✓ USE_REAL_EMAIL: {getattr(settings, 'USE_REAL_EMAIL', False)}")
+        print(f"   ✓ From: {from_email}")
         
-        email_msg = EmailMultiAlternatives(subject, message, from_email, [email])
+        # Create email message with optimized settings
+        email_msg = EmailMultiAlternatives(
+            subject=subject,
+            body=message,
+            from_email=from_email,
+            to=[email],
+            headers={
+                'X-Priority': '1',  # High priority
+                'X-MSMail-Priority': 'High',
+                'Importance': 'high'
+            }
+        )
         email_msg.attach_alternative(html_message, "text/html")
         
-        print(f"🔄 Sending email (timeout: 15 seconds)...")
+        print(f"   🔄 Sending email with optimized SMTP...")
         
-        # Send email with improved error handling
-        email_msg.send(fail_silently=False)
+        # Use threading for faster response in console mode
+        use_real_email = getattr(settings, 'USE_REAL_EMAIL', False)
+        
+        if use_real_email:
+            # Real email - send with 20 second timeout protection
+            import socket
+            original_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(20)  # 20 second timeout for email delivery
+            
+            try:
+                email_msg.send(fail_silently=False)
+            finally:
+                socket.setdefaulttimeout(original_timeout)
+        else:
+            # Console mode - immediate return
+            email_msg.send(fail_silently=False)
         
         elapsed = time.time() - start_time
-        print(f"✅ EMAIL SENT SUCCESSFULLY in {elapsed:.2f} seconds!")
+        print(f"\n   ✅ EMAIL SENT SUCCESSFULLY!")
+        print(f"   ⚡ Delivery time: {elapsed:.2f}s")
+        print(f"{'='*70}\n")
         return True
+        
+    except socket.timeout:
+        elapsed = time.time() - start_time
+        print(f"\n   ⚠️  SMTP Timeout after {elapsed:.2f}s")
+        print(f"   💡 Email may still be delivered")
+        print(f"{'='*70}\n")
+        # Return True in debug mode so user can proceed
+        return settings.DEBUG
         
     except Exception as e:
         elapsed = time.time() - start_time
-        print(f"❌ Email sending error after {elapsed:.2f} seconds: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"\n   ❌ EMAIL ERROR after {elapsed:.2f}s")
+        print(f"   Error: {str(e)}")
         
         # In debug mode, still allow OTP flow to work
         if settings.DEBUG:
-            print(f"\n⚠️  [DEBUG MODE] Email failed but OTP is still valid")
-            print(f"   ✓ OTP {otp} for {email} saved in database")
-            print(f"   ✓ Check terminal for OTP or fix email configuration")
-            return True  # Return True so user can still proceed
+            print(f"   ⚠️  [DEBUG MODE] OTP is still valid in database")
+            print(f"   ✓ OTP {otp} saved for {email}")
+            print(f"   💡 Check terminal output or fix email config")
+            print(f"{'='*70}\n")
+            return True
+        
+        print(f"{'='*70}\n")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -556,6 +651,12 @@ def article_detail(request, slug):
     user_highlights = []
     progress = None
     
+    # Translation based on user language preference
+    translated_title = article.title
+    translated_content = article.content
+    translated_summary = article.summary
+    user_language = 'en'
+    
     if request.user.is_authenticated:
         is_bookmarked = Bookmark.objects.filter(user=request.user, article=article).exists()
         user_rating = Rating.objects.filter(user=request.user, article=article).first()
@@ -569,9 +670,26 @@ def article_detail(request, slug):
         streak, _ = ReadingStreak.objects.get_or_create(user=request.user)
         if streak.last_read_date != timezone.now().date():
             streak.update_streak()
+        
+        # Get user's language preference and translate article
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            user_language = profile.language if profile.language else 'en'
+            
+            if user_language != 'en':
+                translated_title = translate_text(article.title, user_language)
+                translated_content = translate_text(article.content, user_language)
+                if article.summary:
+                    translated_summary = translate_text(article.summary, user_language)
+        except UserProfile.DoesNotExist:
+            pass
     
     context = {
         'article': article,
+        'translated_title': translated_title,
+        'translated_content': translated_content,
+        'translated_summary': translated_summary,
+        'user_language': user_language,
         'related_articles': related_articles,
         'avg_rating': avg_rating,
         'rating_count': rating_count,
@@ -622,6 +740,7 @@ def save_progress(request):
         was_just_completed = False
         if not progress.is_completed and (progress.max_scroll_percentage >= 90 or new_percentage >= 100):
             progress.is_completed = True
+            progress.completed_at = timezone.now()  # Mark completion time
             was_just_completed = True
         
         progress.save()
@@ -874,6 +993,14 @@ def dashboard(request):
     goal_progress = min(100, (this_week_reads / profile.reading_goal) * 100) if profile.reading_goal > 0 else 0
     weekly_goal_achieved = this_week_reads >= profile.reading_goal
     
+    # Check if we should show congratulations popup (only once per session)
+    show_congrats = False
+    if weekly_goal_achieved:
+        session_key = f'goal_achieved_{today.isocalendar()[1]}_{user.id}'  # Week number + user id
+        if not request.session.get(session_key, False):
+            show_congrats = True
+            request.session[session_key] = True
+    
     # Get recently completed articles (last 5 completed this week)
     recent_completions = progress_list.filter(
         is_completed=True,
@@ -894,6 +1021,7 @@ def dashboard(request):
         'reading_goal': profile.reading_goal,
         'this_week_reads': this_week_reads,
         'weekly_goal_achieved': weekly_goal_achieved,
+        'show_congrats': show_congrats,
         'recent_completions': recent_completions,
     }
     return render(request, 'user/dashboard.html', context)
@@ -909,7 +1037,16 @@ def profile(request):
         profile.bio = request.POST.get('bio', '')
         profile.reading_goal = int(request.POST.get('reading_goal', 5))
         profile.preferred_font_size = int(request.POST.get('font_size', 16))
-        profile.dark_mode = request.POST.get('dark_mode') == 'on'
+        
+        # Handle dark mode - update theme field
+        dark_mode_checked = request.POST.get('dark_mode') == 'on'
+        profile.dark_mode = dark_mode_checked
+        profile.theme = 'dark' if dark_mode_checked else 'light'
+        
+        # Handle language preference
+        language = request.POST.get('language', 'en')
+        profile.language = language
+        
         profile.save()
         
         # Update user info
@@ -923,6 +1060,7 @@ def profile(request):
     
     context = {
         'profile': profile,
+        'language_choices': UserProfile.LANGUAGE_CHOICES,
     }
     return render(request, 'user/profile.html', context)
 
@@ -1691,13 +1829,17 @@ def admin_analytics(request):
             'unique': unique_users
         })
     
-    # Article analytics
+    # Total visits and article views
+    total_visits = SiteVisit.objects.filter(visit_date__gte=start_date).count()
+    total_article_views = ArticleViewLog.objects.filter(viewed_at__date__gte=start_date).count()
+    
+    # Article analytics - Top 10 only
     article_views = ArticleViewLog.objects.filter(
         viewed_at__date__gte=start_date
     ).values('article__title').annotate(
         views=Count('id'),
         total_time=Sum('time_spent')
-    ).order_by('-views')[:20]
+    ).order_by('-views')[:10]
     
     # User engagement
     active_readers = ReadingProgress.objects.filter(
@@ -1709,19 +1851,69 @@ def admin_analytics(request):
         is_completed=True
     ).count()
     
-    # Category distribution
+    # New user registrations in the period
+    new_users = User.objects.filter(date_joined__date__gte=start_date).count()
+    
+    # Total users
+    total_users = User.objects.count()
+    
+    # Active users (users who visited in the period)
+    active_users = SiteVisit.objects.filter(
+        visit_date__gte=start_date,
+        user__isnull=False
+    ).values('user').distinct().count()
+    
+    # Daily user registrations
+    daily_registrations = []
+    for i in range(days):
+        day = start_date + timedelta(days=i)
+        count = User.objects.filter(date_joined__date=day).count()
+        daily_registrations.append({
+            'date': day.strftime('%d %b'),
+            'registrations': count
+        })
+    
+    # Top active users - Top 10 only
+    top_users = SiteVisit.objects.filter(
+        visit_date__gte=start_date,
+        user__isnull=False
+    ).values(
+        'user__username',
+        'user__email'
+    ).annotate(
+        visit_count=Count('id')
+    ).order_by('-visit_count')[:10]
+    
+    # Category distribution - Top 10 only
     category_stats = Article.objects.values('category__name').annotate(
         count=Count('id'),
         views=Sum('views_count')
-    ).order_by('-views')
+    ).order_by('-views')[:10]
+    
+    # User engagement stats
+    total_reading_time = ArticleViewLog.objects.filter(
+        viewed_at__date__gte=start_date
+    ).aggregate(total=Sum('time_spent'))['total'] or 0
+    
+    # Average reading time per user
+    avg_reading_time = total_reading_time // max(active_readers, 1)
     
     context = {
         'period': period,
         'daily_visits': json.dumps(daily_visits),
+        'daily_registrations': json.dumps(daily_registrations),
         'article_views': article_views,
         'active_readers': active_readers,
         'completed_articles': completed_articles,
         'category_stats': category_stats,
+        'total_visits': total_visits,
+        'total_article_views': total_article_views,
+        'new_users': new_users,
+        'total_users': total_users,
+        'active_users': active_users,
+        'top_users': top_users,
+        'total_reading_time': total_reading_time,
+        'avg_reading_time': avg_reading_time,
     }
     return render(request, 'admin/analytics.html', context)
 

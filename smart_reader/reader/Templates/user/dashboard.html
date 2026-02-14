@@ -100,6 +100,112 @@
         }
     }
     
+    /* Congratulations Popup Modal */
+    .congrats-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .congrats-modal.show {
+        display: flex;
+    }
+    
+    .congrats-content {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 3rem;
+        border-radius: 20px;
+        text-align: center;
+        max-width: 500px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideInScale 0.5s ease-out;
+        position: relative;
+    }
+    
+    .congrats-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    .congrats-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(90deg);
+    }
+    
+    .congrats-emoji-large {
+        font-size: 5rem;
+        animation: bounce 1s infinite;
+        display: block;
+        margin-bottom: 1rem;
+    }
+    
+    .congrats-content h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .congrats-content p {
+        font-size: 1.25rem;
+        opacity: 0.95;
+        margin-bottom: 1.5rem;
+    }
+    
+    .congrats-button {
+        background: white;
+        color: #10b981;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .congrats-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideInScale {
+        from {
+            transform: scale(0.5) translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+    }
+    
     .streak-badge {
         display: flex;
         align-items: center;
@@ -456,19 +562,21 @@
     </div>
 </div>
 
-<div class="dashboard-content">
-    <!-- Weekly Goal Achievement Banner -->
-    {% if weekly_goal_achieved %}
-    <div class="goal-achievement-banner">
-        <h2>
-            <span class="celebration-emoji">🎉</span>
-            Congratulations! Weekly Goal Achieved!
-            <span class="celebration-emoji">🎉</span>
-        </h2>
-        <p>You've read {{ this_week_reads }} articles this week! Keep up the amazing work! 🌟</p>
+<!-- Congratulations Popup Modal -->
+{% if show_congrats %}
+<div class="congrats-modal show" id="congratsModal">
+    <div class="congrats-content">
+        <button class="congrats-close" onclick="closeCongratsModal()">&times;</button>
+        <span class="congrats-emoji-large">🎉</span>
+        <h2>Congratulations!</h2>
+        <p>You've achieved your weekly reading goal!</p>
+        <p><strong>{{ this_week_reads }} articles</strong> completed this week! 🌟</p>
+        <button class="congrats-button" onclick="closeCongratsModal()">Awesome!</button>
     </div>
-    {% endif %}
-    
+</div>
+{% endif %}
+
+<div class="dashboard-content">
     <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -705,5 +813,21 @@
     setTimeout(() => {
         document.querySelector('.goal-circle .progress').style.strokeDashoffset = offset;
     }, 500);
+    
+    // Close congratulations modal
+    function closeCongratsModal() {
+        const modal = document.getElementById('congratsModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
+    // Close modal when clicking outside the content
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('congratsModal');
+        if (modal && e.target === modal) {
+            closeCongratsModal();
+        }
+    });
 </script>
 {% endblock %}

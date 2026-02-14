@@ -134,6 +134,36 @@
         font-family: monospace;
     }
     
+    /* Conclusion Paragraph Styling */
+    .article-content .conclusion-paragraph {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+        border-left: 4px solid var(--primary);
+        padding: 1.5rem;
+        border-radius: 0 12px 12px 0;
+        margin: 2rem 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        position: relative;
+    }
+    
+    .article-content .conclusion-paragraph::before {
+        content: '📝 Conclusion';
+        display: block;
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .article-content .conclusion-paragraph p {
+        margin-bottom: 0.75rem;
+    }
+    
+    .article-content .conclusion-paragraph p:last-child {
+        margin-bottom: 0;
+    }
+    
     /* Highlight Colors */
     mark.highlight-yellow { background: #fef08a; }
     mark.highlight-green { background: #86efac; }
@@ -614,7 +644,14 @@
                 {% endif %}
             </div>
             
-            <h1 class="article-title">{{ article.title }}</h1>
+            <h1 class="article-title">
+                {{ translated_title|default:article.title }}
+                {% if user_language != 'en' %}
+                <span style="font-size: 0.875rem; color: var(--text-muted); font-weight: 400; margin-left: 1rem;">
+                    <i class="fas fa-language"></i> Translated to {{ user.profile.get_language_display }}
+                </span>
+                {% endif %}
+            </h1>
             
             <div class="article-info">
                 {% if article.author %}
@@ -683,7 +720,7 @@
         </header>
         
         <div class="article-content" id="articleContent">
-            {{ article.content|safe }}
+            {{ translated_content|default:article.content|safe }}
         </div>
         
         <!-- Tags -->
@@ -869,7 +906,36 @@
         }
         // Update display with max progress
         updateProgressDisplay(maxProgressReached);
+        
+        // Style the last paragraph as conclusion
+        styleConclusionParagraph();
     };
+    
+    // Function to style the last paragraph as conclusion
+    function styleConclusionParagraph() {
+        const articleContent = document.getElementById('articleContent');
+        if (!articleContent) return;
+        
+        // Get all paragraphs in the article
+        const paragraphs = articleContent.querySelectorAll('p');
+        if (paragraphs.length === 0) return;
+        
+        // Find the last non-empty paragraph
+        let lastParagraph = null;
+        for (let i = paragraphs.length - 1; i >= 0; i--) {
+            const text = paragraphs[i].textContent.trim();
+            if (text.length > 20) { // At least 20 characters to be considered meaningful
+                lastParagraph = paragraphs[i];
+                break;
+            }
+        }
+        
+        // Apply conclusion styling to the last meaningful paragraph
+        if (lastParagraph) {
+            lastParagraph.classList.add('conclusion-paragraph');
+            console.log('Conclusion paragraph styled automatically');
+        }
+    }
     
     // Update progress display
     function updateProgressDisplay(percentage) {
