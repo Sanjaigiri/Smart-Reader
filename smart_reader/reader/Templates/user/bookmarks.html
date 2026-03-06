@@ -5,16 +5,23 @@
 {% block extra_css %}
 <style>
     .page-header {
-        padding: 3rem 2rem;
+        padding: 2rem 2rem;
         background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
         color: white;
     }
     
     .page-header h1 {
         font-family: 'Playfair Display', serif;
-        font-size: 2.5rem;
+        font-size: 1.75rem;
         max-width: 1400px;
         margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .page-header h1 i {
+        font-size: 1.5rem;
     }
     
     .bookmarks-page {
@@ -54,28 +61,6 @@
     .bookmark-img i {
         font-size: 2.5rem;
         color: white;
-    }
-    
-    .remove-btn {
-        position: absolute;
-        top: 0.75rem;
-        right: 0.75rem;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: white;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--danger);
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-    
-    .bookmark-card:hover .remove-btn {
-        opacity: 1;
     }
     
     .bookmark-body {
@@ -138,6 +123,18 @@
             grid-template-columns: 1fr;
         }
     }
+    
+    /* Dark Mode Image Styling */
+    [data-theme="dark"] .bookmark-img,
+    [data-theme="dark"] img {
+        filter: brightness(0.85) contrast(1.1);
+        transition: filter 0.3s ease;
+    }
+    
+    [data-theme="dark"] .bookmark-img:hover,
+    [data-theme="dark"] img:hover {
+        filter: brightness(0.95) contrast(1.05);
+    }
 </style>
 {% endblock %}
 
@@ -158,9 +155,6 @@
                     {% else %}
                     <i class="fas fa-book-open"></i>
                     {% endif %}
-                    <button class="remove-btn" onclick="removeBookmark({{ bookmark.article.id }}, {{ bookmark.id }})">
-                        <i class="fas fa-times"></i>
-                    </button>
                 </div>
                 <div class="bookmark-body">
                     <h3 class="bookmark-title">
@@ -187,21 +181,6 @@
 
 {% block extra_js %}
 <script>
-function removeBookmark(articleId, bookmarkId) {
-    fetch('/toggle-bookmark/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
-        },
-        body: JSON.stringify({ article_id: articleId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'removed') {
-            document.getElementById('bookmark-' + bookmarkId).remove();
-        }
-    });
-}
+// Bookmarks page - scripts can be added here if needed
 </script>
 {% endblock %}

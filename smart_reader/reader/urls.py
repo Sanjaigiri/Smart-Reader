@@ -61,6 +61,7 @@ urlpatterns = [
     path('add-to-list/', views.add_to_list, name='add_to_list'),
     path('remove-from-list/<int:list_id>/<int:article_id>/', views.remove_from_list, name='remove_from_list'),
     path('delete-list/<int:list_id>/', views.delete_reading_list, name='delete_reading_list'),
+    path('edit-list/<int:list_id>/', views.edit_reading_list, name='edit_reading_list'),
     
     # Streaks & Achievements
     path('my-streaks/', views.my_streaks, name='my_streaks'),

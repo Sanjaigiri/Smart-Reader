@@ -80,8 +80,24 @@ def translate_text(text, target_lang='en'):
 
 # ============ HOME ============
 def home(request):
-    featured_articles = Article.objects.filter(is_featured=True, is_published=True)[:3]
-    recent_articles = Article.objects.filter(is_published=True)[:6]
+    # Get user's language preference
+    user_language = 'EN'
+    if request.user.is_authenticated:
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            user_language = profile.preferred_language if hasattr(profile, 'preferred_language') and profile.preferred_language else 'EN'
+        except UserProfile.DoesNotExist:
+            user_language = 'EN'
+    
+    featured_articles = Article.objects.filter(
+        is_featured=True, 
+        is_published=True,
+        language=user_language
+    )[:3]
+    recent_articles = Article.objects.filter(
+        is_published=True,
+        language=user_language
+    )[:6]
     
     # Show 28 popular categories on home page
     popular_category_slugs = [
@@ -96,7 +112,7 @@ def home(request):
     categories = Category.objects.filter(slug__in=popular_category_slugs)[:28]
     
     # Stats for homepage - Display as 100,000+ for impressive look
-    total_articles = Article.objects.filter(is_published=True).count()
+    total_articles = Article.objects.filter(is_published=True, language=user_language).count()
     display_articles = "100,000" if total_articles > 0 else "0"
     total_users = User.objects.count()
     total_reads = ReadingProgress.objects.filter(is_completed=True).count()
@@ -116,6 +132,42 @@ def home(request):
 # Admin emails that don't require OTP verification
 ADMIN_EMAILS = ['sanjaigiri001@gmail.com', 'sanjaig111@gmail.com']
 
+# Common email domain typos and their corrections
+EMAIL_DOMAIN_TYPOS = {
+    'gamil.com': 'gmail.com',
+    'gmial.com': 'gmail.com',
+    'gmal.com': 'gmail.com',
+    'gmaill.com': 'gmail.com',
+    'gnail.com': 'gmail.com',
+    'gmali.com': 'gmail.com',
+    'gmai.com': 'gmail.com',
+    'gmail.con': 'gmail.com',
+    'gmail.co': 'gmail.com',
+    'gmail.cm': 'gmail.com',
+    'gmaul.com': 'gmail.com',
+    'gmil.com': 'gmail.com',
+    'yaho.com': 'yahoo.com',
+    'yahooo.com': 'yahoo.com',
+    'yahoo.con': 'yahoo.com',
+    'hotmal.com': 'hotmail.com',
+    'hotmai.com': 'hotmail.com',
+    'hotmail.con': 'hotmail.com',
+    'outloo.com': 'outlook.com',
+    'outlok.com': 'outlook.com',
+    'outlook.con': 'outlook.com',
+}
+
+def check_email_typo(email):
+    """Check if email domain has a common typo, return suggested correction or None"""
+    if '@' not in email:
+        return None
+    domain = email.split('@')[1].lower()
+    if domain in EMAIL_DOMAIN_TYPOS:
+        username = email.split('@')[0]
+        correct_domain = EMAIL_DOMAIN_TYPOS[domain]
+        return f"{username}@{correct_domain}"
+    return None
+
 def validate_email_format(email):
     """Validate email format"""
     try:
@@ -127,55 +179,82 @@ def validate_email_format(email):
 
 def send_otp_email(email, otp):
     """
-    Send OTP to user's email - OPTIMIZED FOR HIGH PERFORMANCE (< 10 seconds)
-    Uses optimized SMTP settings and efficient email delivery
+    Send OTP to user's email - SIMPLE AND CLEAN
+    Just the OTP, nothing else
     """
     import time
-    import threading
     start_time = time.time()
     
     print(f"\n{'='*70}")
-    print(f"📧 STARTING OTP EMAIL DELIVERY")
+    print(f"📧 SENDING OTP EMAIL")
     print(f"{'='*70}")
-    print(f"   📨 Target: {email}")
+    print(f"   📨 To: {email}")
     print(f"   🔐 OTP: {otp}")
-    print(f"   ⏰ Started at: {timezone.now().strftime('%H:%M:%S')}")
     
-    subject = 'SmartReader - Email Verification OTP'
+    subject = 'SmartReader - Your Verification Code'
     
-    # Simple plain text version
-    message = f'''Your OTP is: {otp}
+    # Plain text fallback
+    message = f'''SmartReader - Email Verification
 
-This code will expire in 10 minutes.
+Your OTP Code: {otp}
 
-Once verified, you'll have access to:
-• Track reading progress
-• Highlight and take notes
-• Earn achievements and badges
+This code is valid for 10 minutes.
+If you did not request this code, please ignore this email.
 
-- SmartReader
-'''
+- SmartReader Team'''
     
-    # Clean HTML version - simple and professional
+    # Beautiful HTML email with logo and branding
     html_message = f'''<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:20px;font-family:Arial,sans-serif;background:#f5f5f5">
-<div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-<h2 style="color:#6366f1;text-align:center;margin:0 0 20px">📚 SmartReader</h2>
-<p style="color:#333;font-size:18px;font-weight:bold;margin:20px 0 10px">Your OTP is:</p>
-<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;font-size:42px;font-weight:bold;text-align:center;padding:25px;border-radius:10px;letter-spacing:10px;margin:20px 0">{otp}</div>
-<p style="color:#666;margin:15px 0;font-size:14px">This code will expire in <strong>10 minutes</strong>.</p>
-<div style="background:#f9fafb;padding:15px;border-radius:8px;margin:20px 0">
-<p style="color:#333;font-weight:bold;margin:0 0 10px;font-size:15px">Once verified, you'll have access to:</p>
-<ul style="color:#555;margin:10px 0;padding-left:20px;line-height:1.8">
-<li>Track reading progress</li>
-<li>Highlight and take notes</li>
-<li>Earn achievements and badges</li>
-</ul>
-</div>
-<p style="color:#999;font-size:12px;margin:20px 0 0;text-align:center">- SmartReader</p>
-</div>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 20px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background-color:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);overflow:hidden;">
+                    <!-- Header with gradient -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%);padding:32px 24px;text-align:center;">
+                            <!-- Logo Icon -->
+                            <div style="background:#ffffff;width:64px;height:64px;border-radius:16px;margin:0 auto 16px;display:inline-block;line-height:64px;">
+                                <span style="font-size:32px;">📚</span>
+                            </div>
+                            <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:700;letter-spacing:-0.5px;">SmartReader</h1>
+                            <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Your Personal Reading Companion</p>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding:40px 32px;text-align:center;">
+                            <h2 style="color:#1f2937;margin:0 0 8px;font-size:20px;font-weight:600;">Email Verification</h2>
+                            <p style="color:#6b7280;margin:0 0 32px;font-size:15px;line-height:1.5;">Enter this code to verify your email address</p>
+                            
+                            <!-- OTP Code Box -->
+                            <div style="background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:2px solid #e2e8f0;border-radius:12px;padding:24px;margin:0 auto 32px;">
+                                <div style="font-size:42px;font-weight:800;color:#1f2937;letter-spacing:12px;font-family:'Courier New',monospace;">{otp}</div>
+                            </div>
+                            
+                            <!-- Timer -->
+                            <div style="display:inline-block;background:#fef3c7;border-radius:20px;padding:8px 16px;">
+                                <span style="color:#92400e;font-size:13px;font-weight:500;">⏱️ Valid for 10 minutes</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background:#f8fafc;padding:24px 32px;border-top:1px solid #e5e7eb;">
+                            <p style="color:#9ca3af;margin:0;font-size:12px;line-height:1.6;text-align:center;">If you didn't request this code, you can safely ignore this email.<br>Someone may have entered your email by mistake.</p>
+                        </td>
+                    </tr>
+                </table>
+                <!-- Brand Footer -->
+                <p style="color:#9ca3af;font-size:12px;margin:24px 0 0;text-align:center;">© 2026 SmartReader. All rights reserved.</p>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>'''
     
@@ -187,7 +266,7 @@ Once verified, you'll have access to:
         print(f"   ✓ USE_REAL_EMAIL: {getattr(settings, 'USE_REAL_EMAIL', False)}")
         print(f"   ✓ From: {from_email}")
         
-        # Create email message with optimized settings
+        # Create email message with optimized settings and anti-spam headers
         email_msg = EmailMultiAlternatives(
             subject=subject,
             body=message,
@@ -196,7 +275,12 @@ Once verified, you'll have access to:
             headers={
                 'X-Priority': '1',  # High priority
                 'X-MSMail-Priority': 'High',
-                'Importance': 'high'
+                'Importance': 'high',
+                'X-Mailer': 'SmartReader Email Service',
+                'X-Auto-Response-Suppress': 'OOF, AutoReply',
+                'List-Unsubscribe': '<mailto:unsubscribe@smartreader.com>',
+                'Precedence': 'bulk',
+                'Content-Type': 'text/html; charset=utf-8',
             }
         )
         email_msg.attach_alternative(html_message, "text/html")
@@ -273,6 +357,16 @@ def send_otp(request):
                 print(f"❌ Email validation failed for: {email}")
                 return JsonResponse({'status': 'error', 'message': 'Invalid email format'})
             
+            # Check for common email domain typos
+            suggested_email = check_email_typo(email)
+            if suggested_email:
+                print(f"⚠️ Email typo detected: {email} -> {suggested_email}")
+                return JsonResponse({
+                    'status': 'typo',
+                    'message': f'Did you mean {suggested_email}? Please check your email address.',
+                    'suggested_email': suggested_email
+                })
+            
             # Check if email already exists
             if User.objects.filter(email=email).exists():
                 print(f"❌ Email already registered: {email}")
@@ -283,21 +377,40 @@ def send_otp(request):
                 print(f"✓ Admin email detected: {email}")
                 return JsonResponse({'status': 'admin', 'message': 'Admin email - OTP not required'})
             
-            # Generate OTP
+            # Check rate limiting - max 5 OTPs per email per hour
+            one_hour_ago = timezone.now() - timedelta(hours=1)
+            recent_otps = OTPVerification.objects.filter(
+                email=email,
+                created_at__gte=one_hour_ago
+            ).count()
+            
+            if recent_otps >= 5:
+                print(f"❌ Rate limit exceeded for: {email}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Too many OTP requests. Please try again after 1 hour.'
+                })
+            
+            # Generate secure OTP using secrets module
             otp = OTPVerification.generate_otp()
             expires_at = timezone.now() + timedelta(minutes=10)
             
             print(f"✓ OTP generated: {otp}")
             
-            # Delete old OTPs for this email
-            deleted_count = OTPVerification.objects.filter(email=email).delete()
-            print(f"✓ Deleted {deleted_count[0]} old OTP records")
+            # Delete old unverified OTPs for this email (cleanup)
+            deleted_count = OTPVerification.objects.filter(
+                email=email,
+                is_verified=False
+            ).delete()
+            print(f"✓ Deleted {deleted_count[0]} old unverified OTP records")
             
             # Create new OTP record in database
             otp_record = OTPVerification.objects.create(
                 email=email,
                 otp=otp,
-                expires_at=expires_at
+                expires_at=expires_at,
+                is_verified=False,
+                attempts=0
             )
             print(f"✓ OTP saved to database with ID: {otp_record.id}")
             
@@ -319,22 +432,13 @@ def send_otp(request):
             
             print(f"📧 Email sent result: {email_sent} (took {send_elapsed:.2f} seconds)")
             
-            # Determine appropriate message based on email configuration
-            use_real_email = getattr(settings, 'USE_REAL_EMAIL', False)
-            
             if email_sent:
-                if use_real_email:
-                    # Real email sent - user should check inbox
-                    message = f'✓ OTP sent to {email} in {send_elapsed:.1f}s! Check your inbox and spam folder.'
-                else:
-                    # Console mode - OTP printed to terminal
-                    message = f'✓ OTP generated! Check the server terminal/console for OTP: {otp}'
+                message = f'✓ OTP sent to {email}!'
                 
                 return JsonResponse({
                     'status': 'success',
                     'message': message,
-                    'sent_time': f'{send_elapsed:.1f}s',
-                    'debug_otp': otp if settings.DEBUG and not use_real_email else None  # Show OTP in console mode only
+                    'sent_time': f'{send_elapsed:.1f}s'
                 })
             else:
                 # This shouldn't happen in debug mode, but handle it anyway
@@ -369,27 +473,68 @@ def verify_otp(request):
                 return JsonResponse({'status': 'error', 'message': 'OTP must be 6 digits'})
             
             try:
-                otp_record = OTPVerification.objects.filter(email=email, otp=otp).latest('created_at')
+                otp_record = OTPVerification.objects.filter(
+                    email=email,
+                    otp=otp
+                ).latest('created_at')
                 
+                # Check if expired
                 if otp_record.is_expired():
                     print(f"[OTP VERIFY] OTP expired for {email}")
-                    return JsonResponse({'status': 'error', 'message': 'OTP has expired. Please request a new one.'})
+                    otp_record.delete()  # Clean up expired OTP
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'OTP has expired. Please request a new one.'
+                    })
                 
+                # Check attempt limit (max 5 attempts)
+                if otp_record.attempts >= 5:
+                    print(f"[OTP VERIFY] Max attempts exceeded for {email}")
+                    otp_record.delete()  # Delete after max attempts
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Maximum verification attempts exceeded. Please request a new OTP.'
+                    })
+                
+                # Check if already verified
                 if otp_record.is_verified:
-                    # Already verified is okay - user can proceed
                     print(f"[OTP VERIFY] OTP already verified for {email}")
-                    return JsonResponse({'status': 'success', 'message': 'Email already verified'})
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': 'Email already verified'
+                    })
                 
                 # Mark as verified
                 otp_record.is_verified = True
                 otp_record.save()
                 
                 print(f"[OTP VERIFY] ✓ OTP verified successfully for {email}")
-                return JsonResponse({'status': 'success', 'message': 'Email verified successfully!'})
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Email verified successfully!'
+                })
             
             except OTPVerification.DoesNotExist:
                 print(f"[OTP VERIFY] Invalid OTP '{otp}' for {email}")
-                return JsonResponse({'status': 'error', 'message': 'Invalid OTP. Please check and try again.'})
+                
+                # Try to increment attempts if OTP exists but doesn't match
+                try:
+                    latest_otp = OTPVerification.objects.filter(email=email).latest('created_at')
+                    if not latest_otp.is_expired():
+                        latest_otp.increment_attempts()
+                        remaining = 5 - latest_otp.attempts
+                        if remaining > 0:
+                            return JsonResponse({
+                                'status': 'error',
+                                'message': f'Please enter the OTP correctly. {remaining} attempts left.'
+                            })
+                except OTPVerification.DoesNotExist:
+                    pass
+                
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Please enter the OTP correctly.'
+                })
                 
         except Exception as e:
             print(f"[OTP VERIFY] Error: {e}")
@@ -449,9 +594,20 @@ def register(request):
         is_admin_email = email in ADMIN_EMAILS
         
         if not is_admin_email:
-            # Verify OTP for regular users
+            # Verify OTP for regular users - must be verified and not expired
             try:
-                otp_record = OTPVerification.objects.filter(email=email, otp=otp, is_verified=True).latest('created_at')
+                otp_record = OTPVerification.objects.filter(
+                    email=email,
+                    otp=otp,
+                    is_verified=True
+                ).latest('created_at')
+                
+                # Double-check expiration at registration time
+                if otp_record.is_expired():
+                    messages.error(request, 'OTP has expired. Please request a new one!')
+                    otp_record.delete()
+                    return render(request, 'auth/register.html')
+                    
             except OTPVerification.DoesNotExist:
                 messages.error(request, 'Please verify your email with OTP first!')
                 return render(request, 'auth/register.html')
@@ -507,6 +663,11 @@ def user_login(request):
                 pass
         
         if user is not None:
+            # Check if user account is active
+            if not user.is_active:
+                messages.error(request, 'Your account has been deactivated. Please contact support.')
+                return render(request, 'auth/login.html')
+            
             login(request, user)
             messages.success(request, f'Welcome back, {user.first_name or user.username}!')
             next_url = request.GET.get('next', 'dashboard')
@@ -541,6 +702,11 @@ def admin_login(request):
             auth_user = authenticate(request, username=user.username, password=password)
             
             if auth_user is not None:
+                # Check if admin account is active
+                if not auth_user.is_active:
+                    messages.error(request, 'Your admin account has been deactivated. Please contact the system administrator.')
+                    return render(request, 'auth/admin_login.html')
+                
                 login(request, auth_user)
                 messages.success(request, f'Welcome, Admin {auth_user.first_name or auth_user.username}!')
                 return redirect('admin_dashboard')
@@ -561,7 +727,16 @@ def user_logout(request):
 # ============ ARTICLES ============
 @login_required
 def article_list(request):
-    articles = Article.objects.filter(is_published=True)
+    # Get user's preferred language for filtering
+    user_profile = request.user.profile
+    user_language = user_profile.preferred_language if hasattr(user_profile, 'preferred_language') else 'EN'
+    
+    # Filter articles by language and published status
+    articles = Article.objects.filter(
+        is_published=True,
+        language=user_language
+    )
+    
     # Limit categories and tags shown - only top 8 categories and 15 tags
     categories = Category.objects.annotate(article_count=Count('articles')).order_by('-article_count')[:8]
     tags = Tag.objects.annotate(article_count=Count('articles')).order_by('-article_count')[:15]
@@ -635,27 +810,13 @@ def article_detail(request, slug):
     article.views_count += 1
     article.save(update_fields=['views_count'])
     
-    # Get related articles
-    related_articles = Article.objects.filter(
-        category=article.category, is_published=True
-    ).exclude(id=article.id)[:4]
-    
-    # Get ratings
-    avg_rating = article.ratings.aggregate(Avg('score'))['score__avg'] or 0
-    rating_count = article.ratings.count()
-    
     # User-specific data
     is_bookmarked = False
     user_rating = None
     user_notes = []
     user_highlights = []
     progress = None
-    
-    # Translation based on user language preference
-    translated_title = article.title
-    translated_content = article.content
-    translated_summary = article.summary
-    user_language = 'en'
+    user_language = 'EN'
     
     if request.user.is_authenticated:
         is_bookmarked = Bookmark.objects.filter(user=request.user, article=article).exists()
@@ -671,18 +832,28 @@ def article_detail(request, slug):
         if streak.last_read_date != timezone.now().date():
             streak.update_streak()
         
-        # Get user's language preference and translate article
+        # Get user's language preference
         try:
             profile = UserProfile.objects.get(user=request.user)
-            user_language = profile.language if profile.language else 'en'
-            
-            if user_language != 'en':
-                translated_title = translate_text(article.title, user_language)
-                translated_content = translate_text(article.content, user_language)
-                if article.summary:
-                    translated_summary = translate_text(article.summary, user_language)
+            user_language = profile.preferred_language if hasattr(profile, 'preferred_language') and profile.preferred_language else 'EN'
         except UserProfile.DoesNotExist:
-            pass
+            user_language = 'EN'
+    
+    # Get related articles (filter by language if available)
+    related_articles = Article.objects.filter(
+        category=article.category, 
+        is_published=True,
+        language=user_language
+    ).exclude(id=article.id)[:4]
+    
+    # Get ratings
+    avg_rating = article.ratings.aggregate(Avg('score'))['score__avg'] or 0
+    rating_count = article.ratings.count()
+    
+    # Translation based on user language preference (optional feature - removed for now)
+    translated_title = article.title
+    translated_content = article.content
+    translated_summary = article.summary
     
     context = {
         'article': article,
@@ -1036,16 +1207,15 @@ def profile(request):
         # Update profile
         profile.bio = request.POST.get('bio', '')
         profile.reading_goal = int(request.POST.get('reading_goal', 5))
-        profile.preferred_font_size = int(request.POST.get('font_size', 16))
         
         # Handle dark mode - update theme field
         dark_mode_checked = request.POST.get('dark_mode') == 'on'
         profile.dark_mode = dark_mode_checked
         profile.theme = 'dark' if dark_mode_checked else 'light'
         
-        # Handle language preference
-        language = request.POST.get('language', 'en')
-        profile.language = language
+        # Handle language preference - store in database
+        language = request.POST.get('language', 'EN').upper()
+        profile.preferred_language = language
         
         profile.save()
         
@@ -1058,9 +1228,38 @@ def profile(request):
         messages.success(request, 'Profile updated successfully!')
         return redirect('profile')
     
+    from reader.models import LANGUAGE_CHOICES
+    
+    # Get user statistics for profile display
+    from reader.models import ReadingProgress, Note, Bookmark, ReadingStreak
+    from datetime import timedelta
+    total_articles = ReadingProgress.objects.filter(user=request.user, is_completed=True).count()
+    total_notes = Note.objects.filter(user=request.user).count()
+    bookmarks_count = Bookmark.objects.filter(user=request.user).count()
+    
+    # Get weekly articles read
+    week_start = timezone.now() - timedelta(days=7)
+    weekly_articles_read = ReadingProgress.objects.filter(
+        user=request.user, 
+        is_completed=True,
+        last_read_at__gte=week_start
+    ).count()
+    
+    # Get current reading streak
+    try:
+        streak = ReadingStreak.objects.get(user=request.user)
+        reading_streak = streak.current_streak
+    except ReadingStreak.DoesNotExist:
+        reading_streak = 0
+    
     context = {
         'profile': profile,
-        'language_choices': UserProfile.LANGUAGE_CHOICES,
+        'language_choices': LANGUAGE_CHOICES,
+        'total_articles': total_articles,
+        'total_notes': total_notes,
+        'bookmarks_count': bookmarks_count,
+        'reading_streak': reading_streak,
+        'weekly_articles_read': weekly_articles_read,
     }
     return render(request, 'user/profile.html', context)
 
@@ -1112,12 +1311,23 @@ def search(request):
     query = request.GET.get('q', '')
     results = []
     
+    # Get user's language preference
+    user_language = 'EN'
+    if request.user.is_authenticated:
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            user_language = profile.preferred_language if hasattr(profile, 'preferred_language') and profile.preferred_language else 'EN'
+        except UserProfile.DoesNotExist:
+            user_language = 'EN'
+    
     if query:
         results = Article.objects.filter(
             Q(title__icontains=query) |
             Q(content__icontains=query) |
             Q(summary__icontains=query) |
-            Q(tags__name__icontains=query)
+            Q(tags__name__icontains=query),
+            is_published=True,
+            language=user_language
         ).distinct()[:20]
     
     context = {
@@ -1132,10 +1342,20 @@ def search_suggestions(request):
     query = request.GET.get('q', '').strip()
     suggestions = []
     
+    # Get user's language preference
+    user_language = 'EN'
+    if request.user.is_authenticated:
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            user_language = profile.preferred_language if hasattr(profile, 'preferred_language') and profile.preferred_language else 'EN'
+        except UserProfile.DoesNotExist:
+            user_language = 'EN'
+    
     if query and len(query) >= 2:  # Start suggesting after 2 characters
         articles = Article.objects.filter(
             Q(title__icontains=query) | Q(summary__icontains=query),
-            is_published=True
+            is_published=True,
+            language=user_language
         )[:8]  # Limit to 8 suggestions
         
         suggestions = [{
@@ -1486,9 +1706,42 @@ def remove_from_list(request, list_id, article_id):
 def delete_reading_list(request, list_id):
     """Delete a reading list"""
     reading_list = get_object_or_404(ReadingList, id=list_id, user=request.user)
+    name = reading_list.name
     reading_list.delete()
+    
+    # Return JSON for AJAX to avoid page reload
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': f'Reading list "{name}" has been deleted.'})
+    
     messages.success(request, 'Reading list deleted!')
     return redirect('reading_lists')
+
+
+@login_required
+def edit_reading_list(request, list_id):
+    """Edit a reading list"""
+    reading_list = get_object_or_404(ReadingList, id=list_id, user=request.user)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            name = data.get('name', '').strip()
+            description = data.get('description', '').strip()
+            is_public = data.get('is_public', False)
+            
+            if not name:
+                return JsonResponse({'status': 'error', 'message': 'List name is required.'})
+            
+            reading_list.name = name
+            reading_list.description = description
+            reading_list.is_public = is_public
+            reading_list.save()
+            
+            return JsonResponse({'status': 'success', 'message': f'Reading list "{name}" has been updated.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
 
 
 # ============ ADMIN DASHBOARD ============
@@ -1598,7 +1851,7 @@ def admin_users(request):
     status = request.GET.get('status', '')
     if status == 'active':
         users = users.filter(is_active=True)
-    elif status == 'inactive':
+    elif status == 'deactive':
         users = users.filter(is_active=False)
     elif status == 'staff':
         users = users.filter(is_staff=True)
@@ -1629,10 +1882,60 @@ def admin_toggle_user_status(request, user_id):
         if user.is_superuser:
             messages.error(request, 'Cannot modify superuser status!')
         else:
+            # Store previous status to check if it actually changed
+            previous_status = user.is_active
             user.is_active = not user.is_active
             user.save()
-            status = 'activated' if user.is_active else 'deactivated'
-            messages.success(request, f'User {user.username} has been {status}.')
+            
+            # Send email notification only if status actually changed
+            if previous_status != user.is_active:
+                status = 'activated' if user.is_active else 'deactivated'
+                
+                # Email notification
+                subject = f'Account {status.capitalize()}'
+                if user.is_active:
+                    message = f"""
+Dear {user.first_name or user.username},
+
+Your SmartReader account has been activated by an administrator.
+
+You can now log in and access all features of the platform.
+
+Login URL: http://127.0.0.1:8000/login/
+
+If you have any questions, please contact our support team.
+
+Best regards,
+SmartReader Team
+"""
+                else:
+                    message = f"""
+Dear {user.first_name or user.username},
+
+Your SmartReader account has been deactivated by an administrator.
+
+You will not be able to log in until your account is reactivated.
+
+If you believe this is a mistake or have any questions, please contact our support team.
+
+Best regards,
+SmartReader Team
+"""
+                
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.EMAIL_HOST_USER,
+                        [user.email],
+                        fail_silently=False,
+                    )
+                    messages.success(request, f'User {user.username} has been {status} and notified via email.')
+                except Exception as e:
+                    messages.warning(request, f'User {user.username} has been {status}, but email notification failed: {str(e)}')
+            else:
+                messages.info(request, f'User status unchanged.')
+                
     return redirect('admin_users')
 
 
@@ -1798,6 +2101,11 @@ def admin_delete_article(request, article_id):
         article = get_object_or_404(Article, id=article_id)
         title = article.title
         article.delete()
+        
+        # Return JSON for AJAX to avoid page reload
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f'Article "{title}" has been deleted.'})
+        
         messages.success(request, f'Article "{title}" has been deleted.')
     return redirect('admin_articles')
 
@@ -1953,7 +2261,7 @@ def submit_feedback(request):
                 is_helpful=is_helpful
             )
             
-            return JsonResponse({'status': 'success', 'message': 'Thank you for your feedback!'})
+            return JsonResponse({'status': 'success', 'message': 'Thanks for your valuable feedback! We appreciate your input.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     
@@ -2002,15 +2310,15 @@ def admin_feedbacks(request):
 def change_language(request):
     """Change user's language preference"""
     if request.method == 'POST':
-        language = request.POST.get('language')
+        language = request.POST.get('language', 'EN').upper()
         if language:
             profile, created = UserProfile.objects.get_or_create(user=request.user)
-            profile.language = language
+            profile.preferred_language = language
             profile.save()
             
-            # Activate language for current session
-            translation.activate(language)
-            request.session[translation.LANGUAGE_SESSION_KEY] = language
+            # Activate language for current session (convert to lowercase for Django translation)
+            translation.activate(language.lower())
+            request.session[translation.LANGUAGE_SESSION_KEY] = language.lower()
             
             messages.success(request, 'Language preference updated successfully! 🌍')
     
@@ -2026,6 +2334,10 @@ def change_theme(request):
             profile, created = UserProfile.objects.get_or_create(user=request.user)
             profile.theme = theme
             profile.save()
+            
+            # Return JSON for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+                return JsonResponse({'status': 'success', 'theme': theme})
             
             messages.success(request, f'Theme changed to {theme} mode! 🎨')
     

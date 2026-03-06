@@ -217,9 +217,9 @@
             </div>
             <div class="progress-bar-container">
                 <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ progress.scroll_percentage }}%;"></div>
+                    <div class="progress-fill" style="width: {% if progress.is_completed %}100{% else %}{{ progress.max_scroll_percentage }}{% endif %}%;"></div>
                 </div>
-                <div class="progress-percentage">{{ progress.scroll_percentage }}%</div>
+                <div class="progress-percentage">{% if progress.is_completed %}100{% else %}{{ progress.max_scroll_percentage }}{% endif %}%</div>
             </div>
         </div>
         {% endfor %}

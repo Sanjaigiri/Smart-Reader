@@ -5,20 +5,16 @@ import random
 import string
 
 
+# ========== LANGUAGE CHOICES (STANDARDIZED) ==========
+LANGUAGE_CHOICES = [
+    ('EN', 'English'),
+    ('HI', 'हिंदी (Hindi)'),
+    ('TA', 'தமிழ் (Tamil)'),
+    ('ML', 'മലയാളം (Malayalam)'),
+]
+
 # ========== USER PROFILE ==========
 class UserProfile(models.Model):
-    LANGUAGE_CHOICES = [
-        ('en', 'English'),
-        ('hi', 'हिंदी (Hindi)'),
-        ('ta', 'தமிழ் (Tamil)'),
-        ('te', 'తెలుగు (Telugu)'),
-        ('bn', 'বাংলা (Bengali)'),
-        ('mr', 'मराठी (Marathi)'),
-        ('gu', 'ગુજરાતી (Gujarati)'),
-        ('kn', 'ಕನ್ನಡ (Kannada)'),
-        ('ml', 'മലയാളം (Malayalam)'),
-        ('pa', 'ਪੰਜਾਬੀ (Punjabi)'),
-    ]
     
     THEME_CHOICES = [
         ('light', 'Light Mode'),
@@ -29,13 +25,12 @@ class UserProfile(models.Model):
     bio = models.TextField(max_length=500, blank=True)
     avatar = models.ImageField(upload_to='avatars/', default='avatars/default.png', blank=True)
     reading_goal = models.IntegerField(default=5)  # articles per week
-    preferred_font_size = models.IntegerField(default=16)
     dark_mode = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Language and theme preferences
-    language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='en', help_text='Preferred language for the interface')
+    preferred_language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default='EN', help_text='Preferred language for reading articles')
     theme = models.CharField(max_length=10, choices=THEME_CHOICES, default='light', help_text='Preferred theme (light or dark mode)')
     
     def __str__(self):
@@ -44,21 +39,30 @@ class UserProfile(models.Model):
 
 # ========== OTP VERIFICATION ==========
 class OTPVerification(models.Model):
-    email = models.EmailField()
+    email = models.EmailField(db_index=True)  # Index for faster lookups
     otp = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_verified = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)  # Track failed attempts
     
     def __str__(self):
         return f"OTP for {self.email}"
     
     @staticmethod
     def generate_otp():
-        return ''.join(random.choices(string.digits, k=6))
+        """Generate cryptographically secure 6-digit OTP using secrets module"""
+        from secrets import randbelow
+        return str(randbelow(900000) + 100000)
     
     def is_expired(self):
+        """Check if OTP has expired (10 minutes from creation)"""
         return timezone.now() > self.expires_at
+    
+    def increment_attempts(self):
+        """Increment failed verification attempts"""
+        self.attempts += 1
+        self.save()
     
     class Meta:
         ordering = ['-created_at']
@@ -135,6 +139,7 @@ class Article(models.Model):
     tags = models.ManyToManyField(Tag, blank=True, related_name='articles')
     cover_image = models.ImageField(upload_to='covers/', blank=True, null=True)
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
+    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default='EN', db_index=True, help_text='Article language')
     estimated_read_time = models.IntegerField(default=5)  # minutes
     is_featured = models.BooleanField(default=False)
     is_published = models.BooleanField(default=True)

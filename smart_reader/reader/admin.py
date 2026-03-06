@@ -103,8 +103,8 @@ class ArticleAdmin(admin.ModelAdmin):
 # ========== USER PROFILE ADMIN ==========
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'reading_goal', 'language', 'theme', 'dark_mode', 'created_at')
-    list_filter = ('language', 'theme', 'dark_mode', 'created_at')
+    list_display = ('user', 'reading_goal', 'preferred_language', 'theme', 'dark_mode', 'created_at')
+    list_filter = ('preferred_language', 'theme', 'dark_mode', 'created_at')
     search_fields = ('user__username', 'user__email')
 
 

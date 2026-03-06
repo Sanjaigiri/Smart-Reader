@@ -264,6 +264,16 @@
     .section-title i {
         color: var(--admin-accent);
     }
+    
+    /* Dark Mode Image Styling */
+    [data-theme="dark"] img {
+        filter: brightness(0.85) contrast(1.1);
+        transition: filter 0.3s ease;
+    }
+    
+    [data-theme="dark"] img:hover {
+        filter: brightness(0.95) contrast(1.05);
+    }
 </style>
 {% endblock %}
 

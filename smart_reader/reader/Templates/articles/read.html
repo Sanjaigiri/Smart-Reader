@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ article.title }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/article_read.css' %}">
 <style>
     .reading-page {
         display: grid;
@@ -318,10 +320,14 @@
         transition: all 0.3s;
     }
     
-    .star-rating i:hover,
-    .star-rating i.active {
-        color: var(--accent);
+    .star-rating i:hover {
+        color: #fbbf24;
         transform: scale(1.2);
+    }
+    
+    .star-rating i.fas {
+        color: #fbbf24;
+        text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
     }
     
     .avg-rating {
@@ -597,6 +603,220 @@
         background: var(--bg-tertiary);
         border-radius: 6px;
     }
+    
+    /* Dark Mode Image Styling */
+    [data-theme="dark"] img {
+        filter: brightness(0.85) contrast(1.1);
+        transition: filter 0.3s ease;
+    }
+    
+    [data-theme="dark"] img:hover {
+        filter: brightness(0.95) contrast(1.05);
+    }
+    
+    /* ========================================
+       PROFESSIONAL NOTIFICATION MODAL
+       ======================================== */
+    
+    .notification-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        max-width: 400px;
+        width: 90%;
+        display: none;
+        transition: all 0.3s ease;
+    }
+    
+    .notification-modal.show {
+        display: block;
+        animation: modalSlideIn 0.3s ease-out forwards;
+    }
+    
+    .notification-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9998;
+        display: none;
+    }
+    
+    .notification-backdrop.active {
+        display: block;
+        animation: fadeIn 0.2s ease-out;
+    }
+    
+    .notification-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .notification-icon {
+        font-size: 1.5rem;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .notification-icon.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .notification-icon.error {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    
+    .notification-icon.warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+    
+    .notification-icon.info {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+    }
+    
+    .notification-content h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .notification-content p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin: 0;
+    }
+    
+    .notification-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+    
+    .notification-actions button {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .notification-actions .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .notification-actions .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+    
+    .notification-actions .btn-secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+    
+    .notification-actions .btn-secondary:hover {
+        background: var(--border);
+    }
+    
+    .notification-toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        animation: slideInRight 0.3s ease-out forwards;
+        max-width: 400px;
+    }
+    
+    .notification-toast.success {
+        border-left: 4px solid #10b981;
+    }
+    
+    .notification-toast.error {
+        border-left: 4px solid #ef4444;
+    }
+    
+    .notification-toast.warning {
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .notification-toast.info {
+        border-left: 4px solid #6366f1;
+    }
+    
+    @keyframes modalSlideIn {
+        from {
+            transform: translate(-50%, -50%) scale(0.9);
+            opacity: 0;
+        }
+        to {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .notification-modal {
+            max-width: 90vw;
+            padding: 1.5rem;
+        }
+        
+        .notification-toast {
+            bottom: 1rem;
+            right: 1rem;
+            left: 1rem;
+            max-width: none;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -620,6 +840,23 @@
     <button onclick="addNoteFromSelection()" title="Add note">
         <i class="fas fa-sticky-note"></i>
     </button>
+</div>
+
+<!-- Professional Notification Modal -->
+<div class="notification-backdrop" id="notificationBackdrop"></div>
+<div class="notification-modal" id="notificationModal">
+    <div class="notification-header">
+        <div class="notification-icon" id="notificationIcon">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="notification-content">
+            <h3 id="notificationTitle">Notification</h3>
+            <p id="notificationMessage">Message here</p>
+        </div>
+    </div>
+    <div class="notification-actions" id="notificationActions">
+        <button class="btn-primary" onclick="closeNotification()">OK</button>
+    </div>
 </div>
 
 <div class="reading-page">
@@ -747,7 +984,9 @@
             
             <div class="progress-stats">
                 <div class="progress-stat">
-                    <div class="progress-stat-value" id="progressPercent">{{ progress.scroll_percentage }}%</div>
+                    <div class="progress-stat-value" id="progressPercent">
+                        {% if progress.is_completed %}100{% else %}{{ progress.max_scroll_percentage }}{% endif %}%
+                    </div>
                     <div class="progress-stat-label">Completed</div>
                 </div>
                 <div class="progress-stat">
@@ -757,7 +996,7 @@
             </div>
             
             <div class="progress" style="margin-bottom: 1rem;">
-                <div class="progress-bar" id="sidebarProgress" style="width: {{ progress.scroll_percentage }}%"></div>
+                <div class="progress-bar" id="sidebarProgress" style="width: 0%"></div>
             </div>
             
             {% if progress.is_completed %}
@@ -833,8 +1072,8 @@
                 <div class="star-rating" style="margin-top: 1rem;">
                     {% for i in "12345" %}
                     <i class="{% if user_rating and user_rating.score >= forloop.counter %}fas{% else %}far{% endif %} fa-star" 
-                       data-rating="{{ forloop.counter }}"
-                       onclick="rateArticle({{ forloop.counter }})"></i>
+                       data-article-rating
+                       data-rating="{{ forloop.counter }}"></i>
                     {% endfor %}
                 </div>
                 <div class="rating-emoji" id="ratingEmoji"></div>
@@ -889,463 +1128,26 @@
 
 {% block extra_js %}
 <script>
-    const articleId = document.getElementById('articleId').value;
-    const articleContent = document.getElementById('articleContent');
-    let startTime = Date.now();
-    let lastSaveTime = Date.now();
-    let selectedColor = 'yellow';
+    // Pass Django context to JavaScript - these values are needed by the external script
+    const csrftoken = '{{ csrf_token }}';
+    const initialTimeFromDb = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
     
-    // Track max progress (only increases, never decreases)
-    let maxProgressReached = parseInt(document.getElementById('maxProgress').value) || 0;
-    
-    // Scroll to last position on load
-    window.onload = () => {
-        const lastPos = parseInt(document.getElementById('lastPosition').value) || 0;
-        if (lastPos > 0) {
-            window.scrollTo(0, lastPos);
-        }
-        // Update display with max progress
-        updateProgressDisplay(maxProgressReached);
-        
-        // Style the last paragraph as conclusion
-        styleConclusionParagraph();
-    };
-    
-    // Function to style the last paragraph as conclusion
-    function styleConclusionParagraph() {
-        const articleContent = document.getElementById('articleContent');
-        if (!articleContent) return;
-        
-        // Get all paragraphs in the article
-        const paragraphs = articleContent.querySelectorAll('p');
-        if (paragraphs.length === 0) return;
-        
-        // Find the last non-empty paragraph
-        let lastParagraph = null;
-        for (let i = paragraphs.length - 1; i >= 0; i--) {
-            const text = paragraphs[i].textContent.trim();
-            if (text.length > 20) { // At least 20 characters to be considered meaningful
-                lastParagraph = paragraphs[i];
-                break;
-            }
-        }
-        
-        // Apply conclusion styling to the last meaningful paragraph
-        if (lastParagraph) {
-            lastParagraph.classList.add('conclusion-paragraph');
-            console.log('Conclusion paragraph styled automatically');
-        }
-    }
-    
-    // Update progress display
-    function updateProgressDisplay(percentage) {
-        const sidebarProgress = document.getElementById('sidebarProgress');
-        const progressPercent = document.getElementById('progressPercent');
-        if (sidebarProgress) sidebarProgress.style.width = percentage + '%';
-        if (progressPercent) progressPercent.textContent = percentage + '%';
-    }
-    
-    // Update reading progress - progress bar shows current position, but saved progress only increases
-    function updateProgress() {
-        const scrollTop = window.scrollY;
-        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-        
-        // Calculate percentage - if at bottom (within 10px), show 100%
-        let currentPercentage;
-        if (scrollTop + 10 >= docHeight) {
-            currentPercentage = 100;
-        } else {
-            currentPercentage = Math.min(100, Math.round((scrollTop / docHeight) * 100));
-        }
-        
-        // Update top progress bar to show current scroll position
-        document.getElementById('progressBar').style.width = currentPercentage + '%';
-        
-        // Update max progress only if current is higher (PROGRESS ONLY INCREASES)
-        if (currentPercentage > maxProgressReached) {
-            maxProgressReached = currentPercentage;
-            // Update sidebar to show max progress reached
-            updateProgressDisplay(maxProgressReached);
-        }
-        
-        return { scrollTop, currentPercentage, maxPercentage: maxProgressReached };
-    }
-    
-    // Track total time on page - initialize with existing time from progress
-    let totalTimeOnPage = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
-    let pageStartTime = Date.now();
-    let lastDisplayUpdate = Date.now();
-    
-    // Update time display every second
-    function updateTimeDisplay() {
-        const currentSessionTime = Math.floor((Date.now() - pageStartTime) / 1000);
-        const initialTime = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
-        const displayTime = Math.floor(initialTime) + currentSessionTime;
-        const timeSpentEl = document.getElementById('timeSpent');
-        if (timeSpentEl) {
-            timeSpentEl.textContent = displayTime;
-        }
-    }
-    
-    // Update time display every second
-    setInterval(updateTimeDisplay, 1000);
-    
-    // Save progress function
-    function saveProgress() {
-        const { scrollTop, currentPercentage, maxPercentage } = updateProgress();
-        const currentTime = Date.now();
-        const timeSpent = Math.floor((currentTime - lastSaveTime) / 1000);
-        
-        if (timeSpent < 2) return; // Minimum 2 seconds between saves
-        
-        const initialTime = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
-        totalTimeOnPage = initialTime + Math.floor((Date.now() - pageStartTime) / 1000);
-        
-        fetch('/save-progress/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                article_id: articleId,
-                position: scrollTop,
-                percentage: currentPercentage,  // Current position for reference
-                time: timeSpent
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            lastSaveTime = Date.now();
-            // Update max percentage from server response if available
-            if (data.max_percentage) {
-                maxProgressReached = Math.max(maxProgressReached, data.max_percentage);
-                updateProgressDisplay(maxProgressReached);
-            }
-            // Update total time from server if available
-            if (data.total_time) {
-                totalTimeOnPage = data.total_time;
-            }
-            
-            // Show completion notification if article was just completed
-            if (data.just_completed) {
-                showCompletionNotification(data);
-            }
-            
-            console.log('Progress saved! Current:', currentPercentage, '%, Max:', maxPercentage, '%');
-        })
-        .catch(err => console.error('Error saving progress:', err));
-    }
-    
-    // Show completion notification with confetti
-    function showCompletionNotification(data) {
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 2rem 3rem;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(16, 185, 129, 0.4);
-            z-index: 10000;
-            text-align: center;
-            animation: slideInScale 0.5s ease-out;
-        `;
-        
-        const goalMessage = data.weekly_goal_achieved 
-            ? `<p style="font-size: 1.125rem; margin-top: 0.5rem;">🎉 Weekly goal achieved! (${data.this_week_reads}/${data.reading_goal})</p>`
-            : `<p style="font-size: 1.125rem; margin-top: 0.5rem;">Progress: ${data.this_week_reads}/${data.reading_goal} articles this week</p>`;
-        
-        notification.innerHTML = `
-            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">✨ Article Completed! ✨</h2>
-            ${goalMessage}
-            <p style="font-size: 0.9rem; opacity: 0.9; margin-top: 1rem;">Great job! Keep reading!</p>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Add confetti effect
-        createConfetti();
-        
-        // Remove notification after 4 seconds
-        setTimeout(() => {
-            notification.style.animation = 'slideOutScale 0.5s ease-in';
-            setTimeout(() => notification.remove(), 500);
-        }, 4000);
-    }
-    
-    // Simple confetti effect
-    function createConfetti() {
-        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-        for (let i = 0; i < 50; i++) {
-            const confetti = document.createElement('div');
-            confetti.style.cssText = `
-                position: fixed;
-                width: 10px;
-                height: 10px;
-                background: ${colors[Math.floor(Math.random() * colors.length)]};
-                top: 50%;
-                left: 50%;
-                opacity: 1;
-                pointer-events: none;
-                z-index: 9999;
-                animation: confettiFall ${1 + Math.random() * 2}s linear forwards;
-            `;
-            confetti.style.setProperty('--x', (Math.random() - 0.5) * 200 + 'vw');
-            confetti.style.setProperty('--y', Math.random() * 100 + 'vh');
-            document.body.appendChild(confetti);
-            setTimeout(() => confetti.remove(), 3000);
-        }
-    }
-    
-    // Add CSS animations
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInScale {
-            from {
-                transform: translate(-50%, -50%) scale(0.5);
-                opacity: 0;
-            }
-            to {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes slideOutScale {
-            from {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-            to {
-                transform: translate(-50%, -50%) scale(0.5);
-                opacity: 0;
-            }
-        }
-        
-        @keyframes confettiFall {
-            to {
-                transform: translate(var(--x), var(--y)) rotate(720deg);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    
-    // Auto-save every 60 seconds (1 minute)
-    setInterval(saveProgress, 60000);
-    
-    // Also save every 30 seconds while actively reading
-    setInterval(() => {
-        const timeActive = Math.floor((Date.now() - lastSaveTime) / 1000);
-        if (timeActive >= 30) {
-            saveProgress();
-        }
-    }, 30000);
-    
-    // Debounced scroll handler
-    let scrollTimeout;
-    window.addEventListener('scroll', () => {
-        updateProgress();
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(saveProgress, 1000);
-    });
-    
-    // Selection popup
-    const selectionPopup = document.getElementById('selectionPopup');
-    
-    articleContent.addEventListener('mouseup', (e) => {
-        const selection = window.getSelection();
-        if (selection.toString().trim().length > 0) {
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-            
-            selectionPopup.style.top = (rect.top + window.scrollY - 50) + 'px';
-            selectionPopup.style.left = (rect.left + rect.width / 2 - 80) + 'px';
-            selectionPopup.classList.add('active');
-        } else {
-            selectionPopup.classList.remove('active');
-        }
-    });
-    
-    // Highlight selection
-    function highlightSelection(color) {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            const text = selection.toString();
-            
-            // Create highlight
-            const mark = document.createElement('mark');
-            mark.className = 'highlight-' + color;
-            range.surroundContents(mark);
-            
-            // Save to server
-            fetch('/save-highlight/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    article_id: articleId,
-                    text: text,
-                    color: color
-                })
-            });
-            
-            selectionPopup.classList.remove('active');
-            selection.removeAllRanges();
-        }
-    }
-    
-    // Add note from selection
-    function addNoteFromSelection() {
-        const selection = window.getSelection();
-        const text = selection.toString().trim();
-        
-        if (text) {
-            document.getElementById('selectedTextInput').value = text;
-            document.querySelector('.note-form textarea').focus();
-        }
-        
-        selectionPopup.classList.remove('active');
-    }
-    
-    // Bookmark toggle
-    function toggleBookmark() {
-        fetch('/toggle-bookmark/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({ article_id: articleId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            const btn = document.getElementById('bookmarkBtn');
-            if (data.status === 'added') {
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-primary');
-                btn.innerHTML = '<i class="fas fa-bookmark"></i> Bookmarked';
-            } else {
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-secondary');
-                btn.innerHTML = '<i class="far fa-bookmark"></i> Bookmark';
-            }
-        });
-    }
-    
-    // Rate article with emoji feedback
-    function rateArticle(score) {
-        const emojiMap = {
-            1: { emoji: '😞', message: 'We\'re sorry! We\'ll try to improve.' },
-            2: { emoji: '😕', message: 'Thanks for the feedback! We can do better.' },
-            3: { emoji: '😊', message: 'Good! Thanks for reading.' },
-            4: { emoji: '😄', message: 'Great! We\'re glad you enjoyed it!' },
-            5: { emoji: '🤩', message: 'Awesome! You\'re amazing! Thanks for the 5 stars!' }
-        };
-        
-        fetch('/rate-article/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                article_id: articleId,
-                score: score
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Update stars
-            document.querySelectorAll('.star-rating i').forEach((star, index) => {
-                if (index < score) {
-                    star.classList.remove('far');
-                    star.classList.add('fas');
-                } else {
-                    star.classList.remove('fas');
-                    star.classList.add('far');
+    // Get CSRF token properly
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
-            });
-            
-            // Show emoji and message
-            const emoji = emojiMap[score];
-            document.getElementById('ratingEmoji').textContent = emoji.emoji;
-            document.getElementById('ratingMessage').textContent = emoji.message;
-            
-            // Update average
-            document.querySelector('.avg-rating').textContent = data.avg_rating;
-        });
-    }
-    
-    // Submit feedback
-    function submitFeedback(event) {
-        event.preventDefault();
-        const feedbackText = document.getElementById('feedbackText').value;
-        
-        fetch('/submit-feedback/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                article_id: articleId,
-                feedback_text: feedbackText,
-                is_helpful: true
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('✨ ' + data.message);
-                document.getElementById('feedbackText').value = '';
-            } else {
-                alert('Error: ' + data.message);
             }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            alert('Failed to submit feedback. Please try again.');
-        });
-    }
-    
-    // Share article
-    function shareArticle() {
-        if (navigator.share) {
-            navigator.share({
-                title: '{{ article.title }}',
-                url: window.location.href
-            });
-        } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert('Link copied to clipboard!');
         }
+        return cookieValue;
     }
-    
-    // Toggle purchase dropdown
-    function togglePurchaseDropdown(event) {
-        event.stopPropagation();
-        const dropdown = document.getElementById('purchaseDropdown');
-        dropdown.classList.toggle('show');
-    }
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(event) {
-        const dropdown = document.getElementById('purchaseDropdown');
-        if (dropdown && !event.target.closest('.dropdown-wrapper')) {
-            dropdown.classList.remove('show');
-        }
-    });
-    
-    // Save progress before leaving
-    window.addEventListener('beforeunload', saveProgress);
+    const csrftoken = getCookie('csrftoken');
 </script>
+<script src="{% static 'js/article_read.js' %}"></script>
 {% endblock %}

@@ -538,6 +538,16 @@
             grid-template-columns: repeat(2, 1fr);
         }
     }
+    
+    /* Dark Mode Image Styling */
+    [data-theme="dark"] img {
+        filter: brightness(0.85) contrast(1.1);
+        transition: filter 0.3s ease;
+    }
+    
+    [data-theme="dark"] img:hover {
+        filter: brightness(0.95) contrast(1.05);
+    }
 </style>
 {% endblock %}
 
@@ -652,9 +662,11 @@
                                 <p>Last read {{ progress.last_read_at|timesince }} ago</p>
                             </div>
                             <div class="activity-progress">
-                                <span class="percent">{{ progress.scroll_percentage }}%</span>
+                                <span class="percent">{% if progress.is_completed %}100{% else %}{{ progress.max_scroll_percentage }}{% endif %}%</span>
                                 <div class="progress" style="width: 60px; height: 4px; margin-top: 4px;">
-                                    <div class="progress-bar" style="width: {{ progress.scroll_percentage }}%"></div>
+                                    <!-- htmlhint unPaired:false -->
+                                    <div class="progress-bar" style="width: {% if progress.is_completed %}100{% else %}{{ progress.max_scroll_percentage }}{% endif %}%"></div>
+                                    <!-- /htmlhint -->
                                 </div>
                             </div>
                         </div>
@@ -723,11 +735,15 @@
                 <div class="category-list">
                     {% for cat in category_stats %}
                     <div class="category-item">
+                        <!-- htmlhint unPaired:false -->
                         <div class="category-color" style="background: hsl({{ forloop.counter0|mul:60 }}, 70%, 60%);"></div>
+                        <!-- /htmlhint -->
                         <div class="category-info">
                             <h4>{{ cat.article__category__name|default:"Uncategorized" }}</h4>
                             <div class="progress">
+                                <!-- htmlhint unPaired:false -->
                                 <div class="progress-bar" style="width: {{ cat.count|mul:20 }}%;"></div>
+                                <!-- /htmlhint -->
                             </div>
                         </div>
                         <span class="category-count">{{ cat.count }}</span>
@@ -764,6 +780,7 @@
 {% block extra_js %}
 <script>
     // Weekly Activity Chart
+    // eslint-disable-next-line
     const weekStats = {{ week_stats|safe }};
     
     const ctx = document.getElementById('weeklyChart').getContext('2d');
@@ -806,6 +823,7 @@
     });
     
     // Animate goal circle
+    // eslint-disable-next-line
     const goalProgress = {{ goal_progress|floatformat:0 }};
     const circumference = 276.46;
     const offset = circumference - (goalProgress / 100) * circumference;

@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="{% if request.user.is_authenticated and request.user.profile.language %}{{ request.user.profile.language }}{% else %}en{% endif %}" 
+<html lang="{% if request.user.is_authenticated and request.user.profile.preferred_language %}{{ request.user.profile.preferred_language|lower }}{% else %}en{% endif %}" 
       data-theme="{% if request.user.is_authenticated and request.user.profile.theme %}{{ request.user.profile.theme }}{% elif request.user.is_authenticated and request.user.profile.dark_mode %}dark{% else %}light{% endif %}">
 <head>
     <meta charset="UTF-8">
@@ -8,6 +8,25 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    
+    <!-- Load theme from localStorage immediately to prevent flash -->
+    <script>
+        (function() {
+            const htmlElement = document.documentElement;
+            const serverTheme = htmlElement.getAttribute('data-theme');
+            const savedTheme = localStorage.getItem('theme');
+            
+            // IMPORTANT: Server theme (from database) takes priority over localStorage
+            // This ensures saved settings from profile page are respected
+            const themeToApply = serverTheme || savedTheme || 'light';
+            console.log('Server theme:', serverTheme, '| localStorage theme:', savedTheme, '| Applying:', themeToApply);
+            
+            htmlElement.setAttribute('data-theme', themeToApply);
+            
+            // Sync localStorage with what we're actually using
+            localStorage.setItem('theme', themeToApply);
+        })();
+    </script>
     <title>{% block title %}Smart Reader{% endblock %} | Your Personal Reading Hub</title>
     
     <!-- Google Fonts -->
@@ -20,15 +39,15 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mobile_responsive.css' %}">
+    
     <style>
         :root {
             --primary: #6366f1;
             --primary-dark: #4f46e5;
-            --secondary: #ec4899;
             --accent: #f59e0b;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
             
             --bg-primary: #ffffff;
             --bg-secondary: #f8fafc;
@@ -55,6 +74,27 @@
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
             --border: #334155;
+        }
+        
+        /* Dark Mode Image Styling */
+        [data-theme="dark"] img,
+        [data-theme="dark"] .article-img,
+        [data-theme="dark"] .card-img {
+            filter: brightness(0.85) contrast(1.1);
+            transition: filter 0.3s ease;
+        }
+        
+        [data-theme="dark"] img:hover,
+        [data-theme="dark"] .article-img:hover,
+        [data-theme="dark"] .card-img:hover {
+            filter: brightness(0.95) contrast(1.05);
+        }
+        
+        /* Exclude icons and SVG from dark mode filters */
+        [data-theme="dark"] img.icon,
+        [data-theme="dark"] img[src$=".svg"],
+        [data-theme="dark"] .nav-avatar img {
+            filter: none;
         }
         
         * {
@@ -237,6 +277,24 @@
             justify-content: center;
             color: white;
             font-weight: 600;
+        }
+        
+        .user-info-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+        
+        .username-display {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+        
+        .role-badge {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
         }
         
         /* Buttons */
@@ -625,7 +683,7 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="{% url 'home' %}" class="nav-brand">
+            <a href="{% url 'home' %}" class="nav-brand" onclick="return !event.button" id="logoLink">
                 <i class="fas fa-book-reader"></i>
                 <span>SmartReader</span>
             </a>
@@ -650,7 +708,10 @@
                 <div class="dropdown">
                     <div class="nav-user">
                         <div class="nav-avatar">{{ user.username|slice:":1"|upper }}</div>
-                        <span>{{ user.username }}</span>
+                        <div class="user-info-header">
+                            <span class="username-display">{{ user.username }}</span>
+                            <span class="role-badge">{{ display_role }}</span>
+                        </div>
                         <i class="fas fa-chevron-down" style="font-size: 0.75rem;"></i>
                     </div>
                     <div class="dropdown-menu">
@@ -837,10 +898,405 @@
                 }
             });
         }
+        
+        // Global Dark Mode Toggle Handler - runs after entire page is loaded
+        (function() {
+            function setupDarkModeHandler() {
+                const toggleCheckbox = document.getElementById('darkModeToggle');
+                if (!toggleCheckbox) return false;
+                
+                // Don't apply instant changes on profile page
+                if (toggleCheckbox.hasAttribute('data-profile-mode')) {
+                    console.log('✓ Profile page mode - instant changes disabled');
+                    return true;
+                }
+                
+                // Don't override if profile page already set up its handler
+                if (toggleCheckbox.hasAttribute('data-profile-handler')) {
+                    console.log('✓ Profile page handler detected - skipping base.html handler');
+                    return true;
+                }
+                
+                // Only set up once
+                if (toggleCheckbox.hasAttribute('data-handler-attached')) {
+                    console.log('✓ Dark mode handler already attached');
+                    return true;
+                }
+                toggleCheckbox.setAttribute('data-handler-attached', 'true');
+                
+                function applyTheme(isDark) {
+                    const theme = isDark ? 'dark' : 'light';
+                    console.log('Applying theme:', theme);
+                    document.documentElement.setAttribute('data-theme', theme);
+                    localStorage.setItem('theme', theme);
+                    console.log('✓ Theme saved to localStorage');
+                }
+                
+                // Listen for toggle changes
+                toggleCheckbox.addEventListener('change', function() {
+                    console.log('Dark mode toggle clicked. Checked:', this.checked);
+                    applyTheme(this.checked);
+                });
+                
+                console.log('✓ Global dark mode handler attached successfully');
+                return true;
+            }
+            
+            // Try to set up immediately
+            if (setupDarkModeHandler()) return;
+            
+            // If not found, wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupDarkModeHandler);
+            }
+            
+            // Also try after a short delay as fallback
+            setTimeout(setupDarkModeHandler, 100);
+        })();
+        
+        // Logo click - prevent page refresh on same page
+        (function() {
+            const logoLink = document.getElementById('logoLink');
+            if (logoLink) {
+                logoLink.addEventListener('click', function(e) {
+                    // If we're already on the home page, prevent navigation
+                    if (window.location.pathname === '/' || window.location.pathname === '/articles/') {
+                        e.preventDefault();
+                        // Scroll to top instead
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                    // Otherwise allow normal navigation
+                });
+            }
+        })();
     </script>
     
     <!-- Mobile Responsive CSS - Load Last -->
     <link rel="stylesheet" href="{% static 'css/mobile_responsive.css' %}">
+    
+    <!-- Professional Confirm Modal -->
+    <div id="smartConfirmModal" class="smart-modal-overlay" style="display:none;">
+        <div class="smart-modal">
+            <div class="smart-modal-header">
+                <div class="smart-modal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="smart-modal-title">Confirm Action</h3>
+            </div>
+            <div class="smart-modal-body">
+                <p id="smartConfirmMessage">Are you sure you want to proceed?</p>
+            </div>
+            <div class="smart-modal-footer">
+                <button type="button" class="smart-modal-btn smart-modal-cancel" id="smartConfirmCancel">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="smart-modal-btn smart-modal-confirm" id="smartConfirmOk">
+                    <i class="fas fa-check"></i> Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .smart-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: smartModalFadeIn 0.2s ease;
+        }
+        
+        @keyframes smartModalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes smartModalSlideIn {
+            from { transform: scale(0.9) translateY(-20px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        
+        .smart-modal {
+            background: var(--bg-primary, #ffffff);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 400px;
+            width: 90%;
+            animation: smartModalSlideIn 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .smart-modal-header {
+            padding: 24px 24px 16px;
+            text-align: center;
+        }
+        
+        .smart-modal-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+        
+        .smart-modal-icon i {
+            font-size: 24px;
+            color: #d97706;
+        }
+        
+        .smart-modal-icon.danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+        
+        .smart-modal-icon.danger i {
+            color: #dc2626;
+        }
+        
+        .smart-modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary, #1e293b);
+        }
+        
+        .smart-modal-body {
+            padding: 0 24px 24px;
+            text-align: center;
+        }
+        
+        .smart-modal-body p {
+            margin: 0;
+            color: var(--text-secondary, #64748b);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        
+        .smart-modal-footer {
+            padding: 16px 24px;
+            background: var(--bg-secondary, #f8fafc);
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .smart-modal-btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+        }
+        
+        .smart-modal-cancel {
+            background: var(--bg-tertiary, #e2e8f0);
+            color: var(--text-primary, #1e293b);
+        }
+        
+        .smart-modal-cancel:hover {
+            background: #cbd5e1;
+        }
+        
+        .smart-modal-confirm {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .smart-modal-confirm:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-1px);
+        }
+        
+        [data-theme="dark"] .smart-modal {
+            background: #1e293b;
+        }
+        
+        [data-theme="dark"] .smart-modal-footer {
+            background: #0f172a;
+        }
+        
+        [data-theme="dark"] .smart-modal-cancel {
+            background: #334155;
+            color: #f1f5f9;
+        }
+        
+        [data-theme="dark"] .smart-modal-cancel:hover {
+            background: #475569;
+        }
+    </style>
+    
+    <script>
+        // Professional Confirm Modal - Replaces browser's default confirm()
+        window.smartConfirm = function(message, options = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('smartConfirmModal');
+                const messageEl = document.getElementById('smartConfirmMessage');
+                const okBtn = document.getElementById('smartConfirmOk');
+                const cancelBtn = document.getElementById('smartConfirmCancel');
+                const iconDiv = modal.querySelector('.smart-modal-icon');
+                const titleEl = modal.querySelector('.smart-modal-title');
+                
+                // Set message
+                messageEl.innerHTML = message;
+                
+                // Set title if provided
+                if (options.title) {
+                    titleEl.textContent = options.title;
+                } else {
+                    titleEl.textContent = 'Confirm Action';
+                }
+                
+                // Set danger mode for delete actions
+                if (options.danger || message.toLowerCase().includes('delete')) {
+                    iconDiv.classList.add('danger');
+                    iconDiv.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                } else {
+                    iconDiv.classList.remove('danger');
+                    iconDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                }
+                
+                // Set button text
+                okBtn.innerHTML = '<i class="fas fa-check"></i> ' + (options.confirmText || 'Confirm');
+                cancelBtn.innerHTML = '<i class="fas fa-times"></i> ' + (options.cancelText || 'Cancel');
+                
+                // Show modal
+                modal.style.display = 'flex';
+                
+                // Focus cancel button (safer default)
+                cancelBtn.focus();
+                
+                // Handle clicks
+                function handleOk() {
+                    cleanup();
+                    resolve(true);
+                }
+                
+                function handleCancel() {
+                    cleanup();
+                    resolve(false);
+                }
+                
+                function handleOverlayClick(e) {
+                    if (e.target === modal) {
+                        handleCancel();
+                    }
+                }
+                
+                function handleKeydown(e) {
+                    if (e.key === 'Escape') {
+                        handleCancel();
+                    } else if (e.key === 'Enter' && document.activeElement === okBtn) {
+                        handleOk();
+                    }
+                }
+                
+                function cleanup() {
+                    modal.style.display = 'none';
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    modal.removeEventListener('click', handleOverlayClick);
+                    document.removeEventListener('keydown', handleKeydown);
+                }
+                
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+                modal.addEventListener('click', handleOverlayClick);
+                document.addEventListener('keydown', handleKeydown);
+            });
+        };
+        
+        // Professional Toast Notification - Replaces browser's default alert()
+        window.smartAlert = function(message, type = 'success') {
+            // Create toast container if not exists
+            let container = document.getElementById('smartToastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'smartToastContainer';
+                container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10001;display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+            
+            // Create toast
+            const toast = document.createElement('div');
+            toast.className = 'smart-toast smart-toast-' + type;
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            const colors = {
+                success: { bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', icon: '#ffffff' },
+                error: { bg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', icon: '#ffffff' },
+                warning: { bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', icon: '#ffffff' },
+                info: { bg: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', icon: '#ffffff' }
+            };
+            
+            const color = colors[type] || colors.info;
+            
+            toast.style.cssText = `
+                background: ${color.bg};
+                color: white;
+                padding: 16px 20px;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                min-width: 300px;
+                max-width: 450px;
+                animation: smartToastSlideIn 0.3s ease;
+                font-size: 14px;
+                font-weight: 500;
+            `;
+            
+            toast.innerHTML = `
+                <i class="fas ${icons[type] || icons.info}" style="font-size:20px;"></i>
+                <span style="flex:1;">${message}</span>
+                <button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:24px;height:24px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-times" style="font-size:12px;"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                toast.style.animation = 'smartToastSlideOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        };
+        
+        // Add toast animations
+        const toastStyle = document.createElement('style');
+        toastStyle.textContent = `
+            @keyframes smartToastSlideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes smartToastSlideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(toastStyle);
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

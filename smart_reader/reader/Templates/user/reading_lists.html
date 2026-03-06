@@ -104,6 +104,93 @@
         font-size: 0.875rem;
     }
     
+    @keyframes fadeOut {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.9); }
+    }
+    
+    /* Edit Modal Styles */
+    .edit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.2s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    .edit-modal {
+        background: var(--bg-primary);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        max-width: 480px;
+        width: 90%;
+        animation: slideIn 0.3s ease;
+        overflow: hidden;
+    }
+    
+    @keyframes slideIn {
+        from { transform: scale(0.9) translateY(-20px); opacity: 0; }
+        to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    
+    .edit-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .edit-modal-header h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .edit-modal-header h3 i {
+        color: var(--primary);
+    }
+    
+    .edit-modal-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px;
+    }
+    
+    .edit-modal-close:hover {
+        color: var(--text-primary);
+    }
+    
+    .edit-modal-body {
+        padding: 24px;
+    }
+    
+    .edit-modal-footer {
+        padding: 16px 24px;
+        background: var(--bg-secondary);
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+    
     @media (max-width: 1024px) {
         .lists-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -126,7 +213,6 @@
 <div class="lists-page">
     <div class="create-list-card">
         <div id="createBtn">
-            <i class="fas fa-plus" style="font-size: 2rem; color: var(--primary); margin-bottom: 1rem;"></i>
             <h3>Create New Reading List</h3>
             <p style="color: var(--text-secondary); margin-bottom: 1rem;">Organize your articles into custom collections</p>
             <button class="btn btn-primary" onclick="showCreateForm()">
@@ -157,7 +243,7 @@
     
     <div class="lists-grid">
         {% for list in reading_lists %}
-        <div class="list-card">
+        <div class="list-card" data-list-id="{{ list.id }}">
             <div class="list-icon">
                 <i class="fas fa-layer-group"></i>
             </div>
@@ -173,12 +259,55 @@
                 <span class="badge badge-secondary"><i class="fas fa-lock"></i> Private</span>
                 {% endif %}
             </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <button class="btn btn-sm btn-secondary" style="flex: 1; text-align: center;" onclick="showEditForm({{ list.id }}, '{{ list.name|escapejs }}', '{{ list.description|escapejs }}', {{ list.is_public|yesno:'true,false' }})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-sm btn-danger" style="flex: 1;" onclick="deleteReadingList({{ list.id }}, '{{ list.name }}')">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
         </div>
         {% empty %}
         <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">
             <p>No reading lists yet. Create your first one above!</p>
         </div>
         {% endfor %}
+    </div>
+</div>
+
+<!-- Edit Reading List Modal -->
+<div id="editModal" class="edit-modal-overlay" style="display: none;">
+    <div class="edit-modal">
+        <div class="edit-modal-header">
+            <h3><i class="fas fa-edit"></i> Edit Reading List</h3>
+            <button type="button" class="edit-modal-close" onclick="hideEditForm()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <form id="editForm">
+                <input type="hidden" id="editListId" name="list_id">
+                <div class="form-group">
+                    <label class="form-label">List Name</label>
+                    <input type="text" id="editName" name="name" class="form-control" placeholder="e.g., Machine Learning" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description (optional)</label>
+                    <textarea id="editDescription" name="description" class="form-control" placeholder="What's this list about?"></textarea>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="editIsPublic" name="is_public">
+                    <label for="editIsPublic">Make this list public</label>
+                </div>
+            </form>
+        </div>
+        <div class="edit-modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideEditForm()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" class="btn btn-primary" onclick="saveEdit()">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -193,6 +322,147 @@ function showCreateForm() {
 function hideCreateForm() {
     document.getElementById('createBtn').style.display = 'block';
     document.getElementById('createForm').classList.remove('active');
+}
+
+function deleteReadingList(listId, listName) {
+    smartConfirm(`Are you sure you want to delete "<strong>${listName}</strong>"?<br><small style="color:#94a3b8;">This action cannot be undone.</small>`, {
+        title: 'Delete Reading List',
+        confirmText: 'Delete',
+        danger: true
+    }).then(confirmed => {
+        if (!confirmed) return;
+    
+        // Send AJAX request
+        fetch(`/delete-list/${listId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Remove the card from the page
+            const card = document.querySelector(`[data-list-id="${listId}"]`);
+            if (card) {
+                card.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => {
+                    card.remove();
+                    smartAlert(data.message, 'success');
+                    // Check if no lists left
+                    if (document.querySelectorAll('.list-card').length === 0) {
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                }, 300);
+            } else {
+                smartAlert(data.message, 'success');
+                setTimeout(() => location.reload(), 1500);
+            }
+        } else {
+            smartAlert(data.message || 'Error deleting list', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        smartAlert('Error deleting reading list', 'error');
+    });
+    });
+}
+
+function showEditForm(listId, name, description, isPublic) {
+    document.getElementById('editListId').value = listId;
+    document.getElementById('editName').value = name;
+    document.getElementById('editDescription').value = description || '';
+    document.getElementById('editIsPublic').checked = isPublic;
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function hideEditForm() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+function saveEdit() {
+    const listId = document.getElementById('editListId').value;
+    const name = document.getElementById('editName').value.trim();
+    const description = document.getElementById('editDescription').value.trim();
+    const isPublic = document.getElementById('editIsPublic').checked;
+    
+    if (!name) {
+        smartAlert('Please enter a list name', 'error');
+        return;
+    }
+    
+    fetch(`/edit-list/${listId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            name: name,
+            description: description,
+            is_public: isPublic
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            smartAlert(data.message, 'success');
+            hideEditForm();
+            // Update the card in the DOM
+            const card = document.querySelector(`[data-list-id="${listId}"]`);
+            if (card) {
+                card.querySelector('.list-title').textContent = name;
+                card.querySelector('.list-description').textContent = description || 'No description';
+                const badge = card.querySelector('.list-meta .badge');
+                if (isPublic) {
+                    badge.className = 'badge badge-success';
+                    badge.innerHTML = '<i class="fas fa-globe"></i> Public';
+                } else {
+                    badge.className = 'badge badge-secondary';
+                    badge.innerHTML = '<i class="fas fa-lock"></i> Private';
+                }
+            }
+        } else {
+            smartAlert(data.message || 'Error updating list', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        smartAlert('Error updating reading list', 'error');
+    });
+}
+
+// Close modal when clicking outside
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideEditForm();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('editModal').style.display === 'flex') {
+        hideEditForm();
+    }
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 {% endblock %}

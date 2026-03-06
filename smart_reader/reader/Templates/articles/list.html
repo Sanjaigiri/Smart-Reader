@@ -582,6 +582,18 @@
         color: white;
         border-color: transparent;
     }
+    
+    /* Dark Mode Image Styling */
+    [data-theme="dark"] .article-img,
+    [data-theme="dark"] img {
+        filter: brightness(0.85) contrast(1.1);
+        transition: filter 0.3s ease;
+    }
+    
+    [data-theme="dark"] .article-img:hover,
+    [data-theme="dark"] img:hover {
+        filter: brightness(0.95) contrast(1.05);
+    }
 </style>
 {% endblock %}
 
@@ -735,7 +747,8 @@
                         
                         {% if user.is_authenticated %}
                         <button class="bookmark-btn {% if article.id in user_bookmarks %}active{% endif %}" 
-                                onclick="toggleBookmark({{ article.id }}, this)">
+                                data-bookmark-toggle
+                                data-article-id="{{ article.id }}">
                             <i class="{% if article.id in user_bookmarks %}fas{% else %}far{% endif %} fa-bookmark"></i>
                         </button>
                         {% endif %}
@@ -835,6 +848,15 @@ function getCookie(name) {
     return cookieValue;
 }
 const csrftoken = getCookie('csrftoken');
+
+// Event delegation for bookmark toggle
+document.addEventListener('click', function(e) {
+    const bookmarkBtn = e.target.closest('[data-bookmark-toggle]');
+    if (bookmarkBtn) {
+        const articleId = bookmarkBtn.getAttribute('data-article-id');
+        toggleBookmark(articleId, bookmarkBtn);
+    }
+}, true);
 
 function toggleBookmark(articleId, button) {
     fetch('/toggle-bookmark/', {

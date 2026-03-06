@@ -278,6 +278,57 @@
     @keyframes spin {
         to { transform: rotate(360deg); }
     }
+    
+    /* Error tooltip for field validation */
+    .field-error-tooltip {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #ef4444;
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        display: none;
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    .field-error-tooltip::before {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: 1rem;
+        width: 8px;
+        height: 8px;
+        background: #ef4444;
+        transform: rotate(45deg);
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Shake animation for invalid fields */
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .input-group {
+        position: relative;
+    }
 </style>
 {% endblock %}
 
@@ -291,7 +342,7 @@
                 <p>Join SmartReader and start your reading journey</p>
             </div>
             
-            <form method="POST" class="auth-form" id="registerForm" autocomplete="off">
+            <form method="POST" class="auth-form" id="registerForm" autocomplete="off" novalidate>
                 {% csrf_token %}
                 
                 <!-- Name Field -->
@@ -299,8 +350,9 @@
                     <label class="form-label">Full Name</label>
                     <div class="input-group">
                         <i class="fas fa-user icon-left"></i>
-                        <input type="text" name="name" id="name" class="form-control" placeholder="Enter your full name" required autocomplete="off">
+                        <input type="text" name="name" id="name" class="form-control" placeholder="Enter your full name" autocomplete="off">
                     </div>
+                    <div id="nameFeedback" class="validation-feedback"></div>
                 </div>
                 
                 <!-- Email Field with OTP -->
@@ -308,13 +360,13 @@
                     <label class="form-label">Email Address</label>
                     <div class="input-group">
                         <i class="fas fa-envelope icon-left"></i>
-                        <input type="email" name="email" id="email" class="form-control" placeholder="Enter your email" required autocomplete="new-email">
+                        <input type="email" name="email" id="email" class="form-control" placeholder="Enter your email" autocomplete="new-email">
                     </div>
                     <div id="emailFeedback" class="validation-feedback"></div>
                     
                     <!-- OTP Section -->
                     <div class="otp-section" id="otpSection">
-                        <input type="text" name="otp" id="otp" class="form-control" placeholder="Enter 6-digit OTP" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code">
+                        <input type="text" name="otp" id="otp" class="form-control" placeholder="Enter 6-digit OTP" maxlength="6" autocomplete="one-time-code">
                         <button type="button" class="btn-send-otp" id="sendOtpBtn" disabled>
                             Send OTP
                         </button>
@@ -328,7 +380,7 @@
                     <label class="form-label">Password</label>
                     <div class="input-group">
                         <i class="fas fa-lock icon-left"></i>
-                        <input type="password" name="password" id="password" class="form-control" placeholder="Create a password (min 8 characters)" required minlength="8" autocomplete="new-password">
+                        <input type="password" name="password" id="password" class="form-control" placeholder="Create a password (min 8 characters)" autocomplete="new-password">
                         <button type="button" class="password-toggle" onclick="togglePassword('password', this)">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -346,7 +398,7 @@
                     <label class="form-label">Confirm Password</label>
                     <div class="input-group">
                         <i class="fas fa-lock icon-left"></i>
-                        <input type="password" name="password2" id="password2" class="form-control" placeholder="Confirm your password" required autocomplete="new-password">
+                        <input type="password" name="password2" id="password2" class="form-control" placeholder="Confirm your password" autocomplete="new-password">
                         <button type="button" class="password-toggle" onclick="togglePassword('password2', this)">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -354,7 +406,7 @@
                     <div id="passwordMatch" class="validation-feedback"></div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-submit" id="submitBtn" disabled>
+                <button type="submit" class="btn btn-primary btn-submit" id="submitBtn">
                     <i class="fas fa-user-plus"></i> Create Account
                 </button>
             </form>
@@ -407,11 +459,20 @@
     
     // Wait for DOM to be ready
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Register page loaded');
+        console.log('✅ Register page loaded - OTP system initializing...');
         
-        // Get CSRF token
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
-        console.log('CSRF token found:', csrftoken ? 'Yes' : 'No');
+        // Get CSRF token - try multiple methods
+        let csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if (!csrftoken) {
+            csrftoken = getCookie('csrftoken');
+        }
+        console.log('✅ CSRF token found:', csrftoken ? 'Yes' : 'No');
+        
+        if (!csrftoken) {
+            console.error('❌ CRITICAL: No CSRF token found! Forms will fail.');
+            alert('Page error: CSRF token missing. Please refresh the page.');
+            return;
+        }
         
         // State variables
         let emailVerified = false;
@@ -435,6 +496,7 @@
         const strengthText = document.getElementById('strengthText');
         const passwordMatch = document.getElementById('passwordMatch');
         const nameInput = document.getElementById('name');
+        const nameFeedback = document.getElementById('nameFeedback');
         const registerForm = document.getElementById('registerForm');
         
         // Check if all elements exist
@@ -447,7 +509,8 @@
         
         // Reset form
         registerForm.reset();
-        submitBtn.disabled = true;
+        // Keep submit button enabled so users can see validation messages
+        submitBtn.disabled = false;
         
         // Validate email format
         function isValidEmail(email) {
@@ -464,7 +527,7 @@
             };
         }
         
-        // Update submit button state
+        // Update submit button state (visual feedback only)
         function updateSubmitButton() {
             const name = nameInput.value.trim();
             const pass1 = passwordInput.value;
@@ -475,14 +538,21 @@
                               pass1.length >= 8 && 
                               pass1 === pass2;
             
-            submitBtn.disabled = !canSubmit;
-            console.log('Submit button state:', !canSubmit ? 'disabled' : 'enabled', { name: !!name, emailVerified, passLength: pass1.length >= 8, passMatch: pass1 === pass2 });
+            // Keep button enabled but change its appearance
+            if (canSubmit) {
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            } else {
+                submitBtn.style.opacity = '0.8';
+                submitBtn.style.cursor = 'pointer';
+            }
+            console.log('Submit button state:', canSubmit ? 'ready' : 'validation required', { name: !!name, emailVerified, passLength: pass1.length >= 8, passMatch: pass1 === pass2 });
         }
         
         // Check email availability
         async function checkEmail() {
             const email = emailInput.value.trim().toLowerCase();
-            console.log('Checking email:', email);
+            console.log('📧 Checking email:', email);
             
             // Reset states when email changes
             emailVerified = false;
@@ -517,6 +587,10 @@
                 return;
             }
             
+            // Show checking state
+            emailFeedback.textContent = '🔄 Checking...';
+            emailFeedback.className = 'validation-feedback';
+            
             try {
                 const response = await fetch('/check-email/', {
                     method: 'POST',
@@ -527,9 +601,14 @@
                     body: JSON.stringify({ email: email })
                 });
                 
-                console.log('Check email response status:', response.status);
+                console.log('📥 Check email response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
-                console.log('Check email response:', data);
+                console.log('📥 Check email response:', data);
                 
                 if (data.valid) {
                     emailFeedback.textContent = '✓ Email is available';
@@ -538,17 +617,18 @@
                     emailInput.classList.add('is-valid');
                     sendOtpBtn.disabled = false;
                     emailValid = true;
-                    console.log('Email valid, Send OTP button enabled');
+                    console.log('✅ Email valid, Send OTP button enabled');
                 } else {
-                    emailFeedback.textContent = '❌ ' + data.message;
+                    emailFeedback.textContent = '❌ ' + (data.message || 'Email not available');
                     emailFeedback.className = 'validation-feedback invalid';
                     emailInput.classList.remove('is-valid');
                     emailInput.classList.add('is-invalid');
                     sendOtpBtn.disabled = true;
                     emailValid = false;
+                    console.log('❌ Email not available');
                 }
             } catch (error) {
-                console.error('Error checking email:', error);
+                console.error('❌ Error checking email:', error);
                 emailFeedback.textContent = '❌ Error checking email. Please try again.';
                 emailFeedback.className = 'validation-feedback invalid';
                 sendOtpBtn.disabled = true;
@@ -561,30 +641,41 @@
         // Send OTP
         async function sendOtp() {
             const email = emailInput.value.trim().toLowerCase();
-            console.log('sendOtp called for:', email);
+            console.log('📧 sendOtp() called for:', email);
             
             if (!emailValid) {
-                console.log('Email not valid, cannot send OTP');
+                console.log('❌ Email not valid, cannot send OTP');
+                otpFeedback.textContent = '❌ Please enter a valid available email first';
+                otpFeedback.className = 'validation-feedback invalid';
                 return;
             }
             
+            // Disable button and show loading
             sendOtpBtn.disabled = true;
             sendOtpBtn.innerHTML = '<span class="spinner"></span> Sending...';
+            console.log('🔄 Sending OTP request to /send-otp/');
             
             try {
-                console.log('Sending OTP request to /send-otp/');
+                const requestBody = JSON.stringify({ email: email });
+                console.log('📤 Request body:', requestBody);
+                
                 const response = await fetch('/send-otp/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({ email: email })
+                    body: requestBody
                 });
                 
-                console.log('Send OTP response status:', response.status);
+                console.log('📥 Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
-                console.log('Send OTP response:', data);
+                console.log('📥 Response data:', data);
                 
                 // Admin email - no OTP required
                 if (data.status === 'admin') {
@@ -599,15 +690,32 @@
                     otpSection.style.display = 'none';
                     emailInput.readOnly = true;
                     
+                    console.log('✅ Admin email verified automatically');
                     updateSubmitButton();
                     return;
                 }
                 
+                // Email typo detected - suggest correction
+                if (data.status === 'typo') {
+                    console.log('⚠️ Email typo detected, suggested:', data.suggested_email);
+                    otpFeedback.innerHTML = `⚠️ ${data.message}<br><a href="#" onclick="document.getElementById('email').value='${data.suggested_email}'; document.getElementById('email').dispatchEvent(new Event('input')); return false;" style="color: #6366f1; font-weight: bold;">Click to use ${data.suggested_email}</a>`;
+                    otpFeedback.className = 'validation-feedback invalid';
+                    sendOtpBtn.innerHTML = 'Send OTP';
+                    sendOtpBtn.disabled = false;
+                    return;
+                }
+                
+                // Success - OTP sent
                 if (data.status === 'success') {
-                    otpFeedback.textContent = '✓ OTP sent to your email! Check your inbox.';
-                    otpFeedback.className = 'validation-feedback valid';
                     otpSent = true;
+                    otpFeedback.textContent = data.message || '✓ OTP sent! Check your email (and spam folder).';
+                    otpFeedback.className = 'validation-feedback valid';
                     otpInput.focus();
+                    
+                    console.log('✅ OTP sent successfully!');
+                    console.log('📧 Check your email inbox (and spam folder) for the OTP code');
+                    console.log('⚠️  Development mode: OTP is also printed in Django server terminal');
+
                     
                     // Start cooldown timer (60 seconds)
                     let countdown = 60;
@@ -624,15 +732,20 @@
                             sendOtpBtn.innerHTML = `Resend (${countdown}s)`;
                         }
                     }, 1000);
+                    
                 } else {
-                    otpFeedback.textContent = '❌ ' + data.message;
+                    // Error from server
+                    const errorMsg = data.message || 'Failed to send OTP';
+                    console.error('❌ Server error:', errorMsg);
+                    otpFeedback.textContent = '❌ ' + errorMsg;
                     otpFeedback.className = 'validation-feedback invalid';
                     sendOtpBtn.innerHTML = 'Send OTP';
                     sendOtpBtn.disabled = false;
                 }
+                
             } catch (error) {
-                console.error('Error sending OTP:', error);
-                otpFeedback.textContent = '❌ Failed to send OTP. Please try again.';
+                console.error('❌ Error sending OTP:', error);
+                otpFeedback.textContent = '❌ Network error. Please check your connection and try again.';
                 otpFeedback.className = 'validation-feedback invalid';
                 sendOtpBtn.innerHTML = 'Send OTP';
                 sendOtpBtn.disabled = false;
@@ -644,9 +757,16 @@
             const email = emailInput.value.trim().toLowerCase();
             const otp = otpInput.value.trim();
             
-            console.log('Verifying OTP:', otp, 'for email:', email);
+            console.log('🔐 Verifying OTP:', otp, 'for email:', email);
             
-            if (otp.length !== 6) return;
+            if (otp.length !== 6) {
+                console.log('⏸️  Waiting for 6 digits (current:', otp.length, ')');
+                return;
+            }
+            
+            // Show loading state
+            otpFeedback.textContent = '🔄 Verifying...';
+            otpFeedback.className = 'validation-feedback';
             
             try {
                 const response = await fetch('/verify-otp/', {
@@ -658,8 +778,14 @@
                     body: JSON.stringify({ email: email, otp: otp })
                 });
                 
+                console.log('📥 Verify response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
-                console.log('Verify OTP response:', data);
+                console.log('📥 Verify response data:', data);
                 
                 if (data.status === 'success') {
                     emailVerified = true;
@@ -676,16 +802,28 @@
                     sendOtpBtn.style.display = 'none';
                     
                     if (cooldownTimer) clearInterval(cooldownTimer);
+                    
+                    console.log('✅ Email verified successfully!');
+                    console.log('✅ User can now complete registration');
                 } else {
-                    otpFeedback.textContent = '❌ ' + data.message;
+                    // Verification failed
+                    const errorMsg = data.message || 'Invalid OTP';
+                    console.error('❌ Verification failed:', errorMsg);
+                    otpFeedback.textContent = '❌ ' + errorMsg;
                     otpFeedback.className = 'validation-feedback invalid';
                     otpInput.classList.remove('is-valid');
                     otpInput.classList.add('is-invalid');
+                    
+                    // Clear OTP field to allow retry
+                    otpInput.value = '';
+                    otpInput.focus();
                 }
             } catch (error) {
-                console.error('Error verifying OTP:', error);
-                otpFeedback.textContent = '❌ Error verifying OTP. Please try again.';
+                console.error('❌ Error verifying OTP:', error);
+                otpFeedback.textContent = '❌ Network error. Please try again.';
                 otpFeedback.className = 'validation-feedback invalid';
+                otpInput.classList.remove('is-valid');
+                otpInput.classList.add('is-invalid');
             }
             
             updateSubmitButton();
@@ -706,15 +844,24 @@
             if (strength <= 25) {
                 strengthBar.style.background = '#ef4444';
                 strengthText.textContent = 'Weak password';
+                strengthText.style.color = '#ef4444';
             } else if (strength <= 50) {
                 strengthBar.style.background = '#f59e0b';
                 strengthText.textContent = 'Fair password';
+                strengthText.style.color = '#f59e0b';
             } else if (strength <= 75) {
                 strengthBar.style.background = '#3b82f6';
                 strengthText.textContent = 'Good password';
+                strengthText.style.color = '#3b82f6';
             } else {
                 strengthBar.style.background = '#10b981';
                 strengthText.textContent = 'Strong password';
+                strengthText.style.color = '#10b981';
+            }
+            
+            // Clear invalid state if password is now valid
+            if (val.length >= 8) {
+                passwordInput.classList.remove('is-invalid');
             }
             
             checkPasswordMatch();
@@ -729,11 +876,17 @@
             if (!pass2) {
                 passwordMatch.textContent = '';
                 password2Input.classList.remove('is-valid', 'is-invalid');
+                updateSubmitButton();
                 return;
             }
             
-            if (pass1 === pass2) {
+            if (pass1 === pass2 && pass1.length >= 8) {
                 passwordMatch.textContent = '✓ Passwords match';
+                passwordMatch.className = 'validation-feedback valid';
+                password2Input.classList.remove('is-invalid');
+                password2Input.classList.add('is-valid');
+            } else if (pass1 === pass2 && pass1.length < 8) {
+                passwordMatch.textContent = '✓ Passwords match (but too short)';
                 passwordMatch.className = 'validation-feedback valid';
                 password2Input.classList.remove('is-invalid');
                 password2Input.classList.add('is-valid');
@@ -765,56 +918,315 @@
         
         // ===== EVENT LISTENERS =====
         
+        console.log('🔗 Attaching event listeners...');
+        
         // Email input - check availability after typing
-        emailInput.addEventListener('input', debounce(checkEmail, 500));
+        if (emailInput) {
+            emailInput.addEventListener('input', debounce(checkEmail, 500));
+            console.log('✅ Email input listener attached');
+        } else {
+            console.error('❌ Email input not found!');
+        }
         
         // Send OTP button click
-        sendOtpBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Send OTP button clicked!');
-            sendOtp();
-        });
+        if (sendOtpBtn) {
+            sendOtpBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔘 Send OTP button clicked!');
+                sendOtp();
+            });
+            console.log('✅ Send OTP button listener attached');
+        } else {
+            console.error('❌ Send OTP button not found!');
+        }
         
         // OTP input - auto verify when 6 digits entered
-        otpInput.addEventListener('input', function() {
-            // Only allow numbers
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length === 6 && !isAdminEmail) {
-                verifyOtp();
-            }
-        });
+        if (otpInput) {
+            otpInput.addEventListener('input', function() {
+                // Only allow numbers
+                this.value = this.value.replace(/[^0-9]/g, '');
+                console.log('🔢 OTP input:', this.value, 'length:', this.value.length);
+                
+                // Clear error styling when user starts typing
+                if (this.value.length > 0) {
+                    this.classList.remove('is-invalid');
+                    otpFeedback.textContent = '';
+                }
+                
+                if (this.value.length === 6 && !isAdminEmail) {
+                    console.log('✅ 6 digits entered, verifying...');
+                    verifyOtp();
+                }
+            });
+            console.log('✅ OTP input listener attached');
+        } else {
+            console.error('❌ OTP input not found!');
+        }
         
         // Password inputs
-        passwordInput.addEventListener('input', checkPasswordStrength);
-        password2Input.addEventListener('input', checkPasswordMatch);
-        nameInput.addEventListener('input', updateSubmitButton);
+        if (passwordInput) {
+            passwordInput.addEventListener('input', checkPasswordStrength);
+            console.log('✅ Password input listener attached');
+        }
+        if (password2Input) {
+            password2Input.addEventListener('input', checkPasswordMatch);
+            console.log('✅ Password2 input listener attached');
+        }
+        if (nameInput) {
+            nameInput.addEventListener('input', validateName);
+            console.log('✅ Name input listener attached');
+        }
         
-        // Form submission
-        registerForm.addEventListener('submit', function(e) {
-            if (!emailVerified) {
-                e.preventDefault();
-                alert('Please verify your email first!');
+        // Validate name in real-time
+        function validateName() {
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                nameFeedback.textContent = '';
+                nameFeedback.className = 'validation-feedback';
+                nameInput.classList.remove('is-valid', 'is-invalid');
                 return false;
             }
             
-            const pass1 = passwordInput.value;
-            const pass2 = password2Input.value;
+            if (name.length < 6) {
+                nameFeedback.textContent = '❌ Name must be at least 6 characters';
+                nameFeedback.className = 'validation-feedback invalid';
+                nameInput.classList.remove('is-valid');
+                nameInput.classList.add('is-invalid');
+                return false;
+            }
             
-            if (pass1 !== pass2) {
-                e.preventDefault();
-                alert('Passwords do not match!');
+            // Check if first letter is capital
+            if (name[0] !== name[0].toUpperCase()) {
+                nameFeedback.textContent = '❌ Name must start with a capital letter';
+                nameFeedback.className = 'validation-feedback invalid';
+                nameInput.classList.remove('is-valid');
+                nameInput.classList.add('is-invalid');
+                return false;
+            }
+            
+            nameFeedback.textContent = '✓ Name looks good';
+            nameFeedback.className = 'validation-feedback valid';
+            nameInput.classList.remove('is-invalid');
+            nameInput.classList.add('is-valid');
+            updateSubmitButton();
+            return true;
+        }
+        
+        // Comprehensive form validation
+        function validateForm() {
+            let isValid = true;
+            let firstInvalidField = null;
+            
+            // Reset all validation states
+            const allInputs = [nameInput, emailInput, otpInput, passwordInput, password2Input];
+            allInputs.forEach(input => {
+                if (input) input.classList.remove('is-invalid');
+            });
+            
+            // 1. Check Full Name
+            const name = nameInput.value.trim();
+            if (!name) {
+                nameInput.classList.add('is-invalid');
+                focusField(nameInput);
+                nameFeedback.textContent = '⚠️ Please enter your full name';
+                nameFeedback.className = 'validation-feedback invalid';
+                showFieldError(nameInput, '⚠️ Please enter your full name');
+                return false;
+            }
+            
+            if (name.length < 6) {
+                nameInput.classList.add('is-invalid');
+                focusField(nameInput);
+                nameFeedback.textContent = '⚠️ Name must be at least 6 characters';
+                nameFeedback.className = 'validation-feedback invalid';
+                showFieldError(nameInput, '⚠️ Name must be at least 6 characters');
+                return false;
+            }
+            
+            if (name[0] !== name[0].toUpperCase()) {
+                nameInput.classList.add('is-invalid');
+                focusField(nameInput);
+                nameFeedback.textContent = '⚠️ Name must start with a capital letter';
+                nameFeedback.className = 'validation-feedback invalid';
+                showFieldError(nameInput, '⚠️ First letter must be capital');
+                return false;
+            }
+            
+            // 2. Check Email
+            const email = emailInput.value.trim();
+            if (!email) {
+                emailInput.classList.add('is-invalid');
+                focusField(emailInput);
+                emailFeedback.textContent = '⚠️ Please enter your email address';
+                emailFeedback.className = 'validation-feedback invalid';
+                showFieldError(emailInput, '⚠️ Please enter your email address');
+                return false;
+            }
+            
+            if (!isValidEmail(email)) {
+                emailInput.classList.add('is-invalid');
+                focusField(emailInput);
+                emailFeedback.textContent = '⚠️ Please enter a valid email address';
+                emailFeedback.className = 'validation-feedback invalid';
+                showFieldError(emailInput, '⚠️ Please enter a valid email address');
+                return false;
+            }
+            
+            if (!emailValid) {
+                emailInput.classList.add('is-invalid');
+                focusField(emailInput);
+                emailFeedback.textContent = '⚠️ This email is already registered or not available';
+                emailFeedback.className = 'validation-feedback invalid';
+                showFieldError(emailInput, '⚠️ This email is already registered');
+                return false;
+            }
+            
+            // 3. Check OTP verification (skip for admin emails)
+            if (!isAdminEmail && !emailVerified) {
+                const otp = otpInput.value.trim();
+                
+                if (!otpSent) {
+                    focusField(sendOtpBtn);
+                    otpFeedback.textContent = '⚠️ Please click "Send OTP" to receive verification code';
+                    otpFeedback.className = 'validation-feedback invalid';
+                    showFieldError(sendOtpBtn, '⚠️ Please send OTP to your email first');
+                    return false;
+                }
+                
+                if (!otp) {
+                    otpInput.classList.add('is-invalid');
+                    focusField(otpInput);
+                    otpFeedback.textContent = '⚠️ Please enter the 6-digit OTP sent to your email';
+                    otpFeedback.className = 'validation-feedback invalid';
+                    showFieldError(otpInput, '⚠️ Please enter the OTP code');
+                    return false;
+                }
+                
+                if (otp.length !== 6) {
+                    otpInput.classList.add('is-invalid');
+                    focusField(otpInput);
+                    otpFeedback.textContent = '⚠️ OTP must be 6 digits';
+                    otpFeedback.className = 'validation-feedback invalid';
+                    showFieldError(otpInput, '⚠️ Please enter complete 6-digit OTP');
+                    return false;
+                }
+                
+                if (!emailVerified) {
+                    otpInput.classList.add('is-invalid');
+                    focusField(otpInput);
+                    otpFeedback.textContent = '⚠️ Please verify your OTP. Enter the correct code from your email.';
+                    otpFeedback.className = 'validation-feedback invalid';
+                    showFieldError(otpInput, '⚠️ Email not verified - check OTP');
+                    return false;
+                }
+            }
+            
+            // 4. Check Password
+            const pass1 = passwordInput.value;
+            if (!pass1) {
+                passwordInput.classList.add('is-invalid');
+                focusField(passwordInput);
+                strengthText.textContent = '⚠️ Please enter a password';
+                strengthText.style.color = '#ef4444';
+                showFieldError(passwordInput, '⚠️ Please create a password');
                 return false;
             }
             
             if (pass1.length < 8) {
-                e.preventDefault();
-                alert('Password must be at least 8 characters!');
+                passwordInput.classList.add('is-invalid');
+                focusField(passwordInput);
+                strengthText.textContent = '⚠️ Password must be at least 8 characters';
+                strengthText.style.color = '#ef4444';
+                showFieldError(passwordInput, '⚠️ Password too short (min 8 characters)');
                 return false;
             }
-        });
+            
+            // 5. Check Confirm Password
+            const pass2 = password2Input.value;
+            if (!pass2) {
+                password2Input.classList.add('is-invalid');
+                focusField(password2Input);
+                passwordMatch.textContent = '⚠️ Please confirm your password';
+                passwordMatch.className = 'validation-feedback invalid';
+                showFieldError(password2Input, '⚠️ Please re-enter your password');
+                return false;
+            }
+            
+            if (pass1 !== pass2) {
+                password2Input.classList.add('is-invalid');
+                focusField(password2Input);
+                passwordMatch.textContent = '⚠️ Passwords do not match';
+                passwordMatch.className = 'validation-feedback invalid';
+                showFieldError(password2Input, '⚠️ Passwords must match');
+                return false;
+            }
+            
+            console.log('✅ All form validations passed');
+            return true;
+        }
         
-        console.log('All event listeners attached successfully');
+        // Focus field with smooth scroll
+        function focusField(field) {
+            if (field) {
+                field.focus();
+                field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        // Show field error with animation
+        function showFieldError(field, message) {
+            // Create or update error tooltip
+            let tooltip = field.parentElement.querySelector('.field-error-tooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.className = 'field-error-tooltip';
+                field.parentElement.style.position = 'relative';
+                field.parentElement.appendChild(tooltip);
+            }
+            
+            tooltip.textContent = message;
+            tooltip.style.display = 'block';
+            
+            // Shake animation
+            field.style.animation = 'shake 0.5s';
+            setTimeout(() => {
+                field.style.animation = '';
+            }, 500);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (tooltip) tooltip.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Form submission
+        if (registerForm) {
+            registerForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                console.log('📝 Form submission initiated');
+                console.log('   Email verified:', emailVerified);
+                console.log('   Is admin:', isAdminEmail);
+                
+                // Validate all fields
+                if (!validateForm()) {
+                    console.error('❌ Form validation failed');
+                    return false;
+                }
+                
+                console.log('✅ Form validation passed, submitting...');
+                
+                // Submit the form
+                this.submit();
+            });
+            console.log('✅ Form submit listener attached');
+        } else {
+            console.error('❌ Register form not found!');
+        }
+        
+        console.log('✅ All event listeners attached successfully');
+        console.log('📱 OTP system ready! Type an email to start...');
     });
 })();
 </script>

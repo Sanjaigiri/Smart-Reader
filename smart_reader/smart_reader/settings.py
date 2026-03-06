@@ -71,6 +71,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'reader.context_processors.admin_check',
+                'reader.context_processors.user_role',
             ],
         },
     },
@@ -199,39 +200,34 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'
 
-# ============ EMAIL CONFIGURATION - OPTIMIZED FOR HIGH PERFORMANCE ============
-# Email settings optimized for fast OTP delivery (< 10 seconds)
+# ============ EMAIL CONFIGURATION - SEND TO ANY EMAIL ============
+# Users enter ANY email (Gmail, Yahoo, Outlook, etc.)
+# OTP is sent directly to their inbox
+# Uses SendGrid for universal email delivery
 # 
-# TO SEND REAL OTP EMAILS:
-# 1. Open the .env file in smart_reader folder
-# 2. Get Gmail App Password from: https://myaccount.google.com/apppasswords
-# 3. Set USE_REAL_EMAIL=True in .env file
-# 4. Update EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env
-# 5. Save .env file and restart Django server
-# 6. Test signup - OTP will be sent to real email in under 10 seconds!
+# SETUP:
+# 1. Get SendGrid API key: https://app.sendgrid.com/settings/api_keys
+# 2. Update .env file: SENDGRID_API_KEY=your_key
+# 3. Restart Django
 
 USE_REAL_EMAIL = os.getenv('USE_REAL_EMAIL', 'False') == 'True'
 
 if USE_REAL_EMAIL:
-    # Gmail SMTP - Optimized for fast email delivery
+    # Gmail SMTP Backend - Simple & Reliable
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-    EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-    EMAIL_USE_SSL = False  # Don't use SSL with TLS
-    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'your-email@gmail.com')
-    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f'SmartReader <{EMAIL_HOST_USER}>')
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')  # Your Gmail address
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')  # Gmail App Password
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
     
-    # Performance optimization settings for fast email delivery (< 20 seconds)
-    EMAIL_TIMEOUT = 20  # Connection timeout in 20 seconds
-    EMAIL_USE_LOCALTIME = False  # Use UTC for timestamps
-    SERVER_EMAIL = EMAIL_HOST_USER  # For error emails
-    
-    # Connection pooling - reuse connections for better performance
-    EMAIL_USE_CONNECTION_POOLING = True
+    # Performance settings
+    EMAIL_TIMEOUT = 20
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
 else:
-    # Console Backend - OTPs will be printed in terminal (for development)
+    # Console Backend - OTPs printed in terminal (development)
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'SmartReader <noreply@smartreader.com>'
-    EMAIL_TIMEOUT = 5  # Fast timeout for console mode
+    EMAIL_TIMEOUT = 5
+

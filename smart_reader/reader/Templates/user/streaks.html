@@ -4,237 +4,590 @@
 
 {% block extra_css %}
 <style>
-    .streaks-header {
-        padding: 3rem 2rem;
-        background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
-        color: white;
-    }
-    
-    .streaks-header-content {
-        max-width: 1400px;
+    .streaks-page {
+        max-width: 1100px;
         margin: 0 auto;
-    }
-    
-    .streaks-header h1 {
-        font-family: 'Playfair Display', serif;
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .streaks-content {
-        max-width: 1000px;
-        margin: -2rem auto 0;
-        padding: 0 2rem 2rem;
-        position: relative;
-        z-index: 10;
-    }
-    
-    .streak-main-card {
-        background: var(--bg-primary);
-        border-radius: var(--radius-lg);
-        border: 1px solid var(--border);
-        padding: 3rem;
-        text-align: center;
-        margin-bottom: 2rem;
-        box-shadow: var(--shadow-xl);
-    }
-    
-    .streak-fire {
-        font-size: 5rem;
-        margin-bottom: 1rem;
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-    }
-    
-    .streak-number {
-        font-size: 4rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-    }
-    
-    .streak-label {
-        font-size: 1.25rem;
-        color: var(--text-secondary);
-        margin-bottom: 2rem;
-    }
-    
-    .streak-stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 2rem;
-        padding-top: 2rem;
-        border-top: 1px solid var(--border);
-    }
-    
-    .streak-stat {
-        text-align: center;
-    }
-    
-    .streak-stat-number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--primary);
-    }
-    
-    .streak-stat-label {
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-    }
-    
-    .milestones-section {
-        background: var(--bg-primary);
-        border-radius: var(--radius-lg);
-        border: 1px solid var(--border);
         padding: 2rem;
     }
     
-    .milestones-title {
-        font-size: 1.25rem;
-        font-weight: 600;
+    /* Main Layout - Two Column */
+    .streaks-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.5rem;
         margin-bottom: 1.5rem;
+    }
+    
+    /* Left Panel - Streak Circle */
+    .streak-circle-panel {
+        background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        text-align: center;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .streak-circle-panel::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+        animation: rotate 20s linear infinite;
+    }
+    
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .streak-circle-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .streak-ring {
+        width: 180px;
+        height: 180px;
+        margin: 0 auto 1.5rem;
+        position: relative;
+    }
+    
+    .streak-ring svg {
+        transform: rotate(-90deg);
+        width: 100%;
+        height: 100%;
+    }
+    
+    .streak-ring-bg {
+        fill: none;
+        stroke: rgba(255,255,255,0.25);
+        stroke-width: 12;
+    }
+    
+    .streak-ring-progress {
+        fill: none;
+        stroke: white;
+        stroke-width: 12;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1s ease;
+    }
+    
+    .streak-ring-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+    
+    .streak-fire-icon {
+        font-size: 2rem;
+        margin-bottom: 0.25rem;
+        animation: flame 1s ease-in-out infinite alternate;
+    }
+    
+    @keyframes flame {
+        from { transform: scale(1) translateY(0); }
+        to { transform: scale(1.1) translateY(-3px); }
+    }
+    
+    .streak-big-number {
+        font-size: 3rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    
+    .streak-unit {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    
+    .streak-panel-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .streak-panel-subtitle {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+    
+    /* Right Panel - Stats & Weekly */
+    .streak-info-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    /* Stats Row */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.75rem;
+        font-size: 1.1rem;
+    }
+    
+    .stat-icon.best { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+    .stat-icon.total { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .stat-icon.last { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Weekly Activity */
+    .weekly-activity {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        flex: 1;
+    }
+    
+    .weekly-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .weekly-title {
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+    
+    .weekly-title i {
+        color: #8b5cf6;
+    }
+    
+    .weekly-legend {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+    }
+    
+    .legend-dot.active { background: linear-gradient(135deg, #6366f1, #a855f7); }
+    .legend-dot.inactive { background: var(--bg-tertiary); }
+    
+    .weekly-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .day-cell {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        background: var(--bg-tertiary);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        cursor: default;
+    }
+    
+    .day-cell.active {
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        color: white;
+    }
+    
+    .day-cell.today {
+        border: 2px solid var(--primary);
+    }
+    
+    .day-name {
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        opacity: 0.8;
+    }
+    
+    .day-date {
+        font-size: 1rem;
+        font-weight: 700;
+    }
+    
+    /* Milestones Section */
+    .milestones-section {
+        background: var(--bg-primary);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+    }
+    
+    .milestones-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .milestones-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .milestones-title i {
+        color: #8b5cf6;
+    }
+    
+    .next-milestone {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        background: var(--bg-tertiary);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+    }
+    
+    .milestones-track {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        position: relative;
+        padding: 0.5rem 0;
+    }
+    
+    .milestone-node {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .milestone-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        border: 3px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s;
+    }
+    
+    .milestone-node.achieved .milestone-circle {
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        border-color: #8b5cf6;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    }
+    
+    .milestone-node.current .milestone-circle {
+        border-color: #8b5cf6;
+        animation: pulse-border 2s infinite;
+    }
+    
+    @keyframes pulse-border {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+        50% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+    }
+    
+    .milestone-info {
+        text-align: center;
+    }
+    
+    .milestone-days {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .milestone-name {
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+    }
+    
+    .milestone-line {
+        position: absolute;
+        top: calc(25px + 0.5rem);
+        left: 12.5%;
+        right: 12.5%;
+        height: 3px;
+        background: var(--border);
+        z-index: 0;
+    }
+    
+    .milestone-line-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #a855f7);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+    
+    /* Tip Card */
+    .tip-card {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08));
+        border-radius: 12px;
         display: flex;
         align-items: center;
         gap: 0.75rem;
     }
     
-    .milestones-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-    }
-    
-    .milestone-card {
-        text-align: center;
-        padding: 1.5rem;
-        border-radius: var(--radius);
-        background: var(--bg-tertiary);
-        transition: all 0.3s;
-    }
-    
-    .milestone-card.achieved {
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
-        border: 2px solid var(--primary);
-    }
-    
-    .milestone-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .milestone-days {
+    .tip-icon {
         font-size: 1.25rem;
-        font-weight: 700;
     }
     
-    .milestone-label {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-    }
-    
-    .encouragement {
-        margin-top: 2rem;
-        padding: 1.5rem;
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
-        border-radius: var(--radius);
-        text-align: center;
-    }
-    
-    .encouragement p {
-        font-size: 1.125rem;
+    .tip-text {
+        font-size: 0.85rem;
         color: var(--text-primary);
     }
     
+    .tip-text strong {
+        color: #8b5cf6;
+    }
+    
     @media (max-width: 768px) {
-        .streak-stats { grid-template-columns: 1fr; gap: 1rem; }
-        .milestones-grid { grid-template-columns: repeat(2, 1fr); }
+        .streaks-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-row {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .weekly-grid {
+            gap: 0.35rem;
+        }
+        
+        .milestones-track {
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        .milestone-line {
+            display: none;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="streaks-header">
-    <div class="streaks-header-content">
-        <h1><i class="fas fa-fire"></i> Reading Streaks</h1>
-        <p>Build consistent reading habits and watch your streak grow!</p>
-    </div>
-</section>
-
-<div class="streaks-content">
-    <div class="streak-main-card">
-        <div class="streak-fire">🔥</div>
-        <div class="streak-number">{{ streak.current_streak }}</div>
-        <div class="streak-label">Day{% if streak.current_streak != 1 %}s{% endif %} Current Streak</div>
-        
-        <div class="streak-stats">
-            <div class="streak-stat">
-                <div class="streak-stat-number">{{ streak.longest_streak }}</div>
-                <div class="streak-stat-label">Longest Streak</div>
-            </div>
-            <div class="streak-stat">
-                <div class="streak-stat-number">{{ streak.total_reading_days }}</div>
-                <div class="streak-stat-label">Total Reading Days</div>
-            </div>
-            <div class="streak-stat">
-                <div class="streak-stat-number">
-                    {% if streak.last_read_date %}
-                        {{ streak.last_read_date|date:"M d" }}
-                    {% else %}
-                        --
-                    {% endif %}
+<div class="streaks-page">
+    <div class="streaks-layout">
+        <!-- Left Panel - Streak Circle -->
+        <div class="streak-circle-panel">
+            <div class="streak-circle-content">
+                <div class="streak-ring">
+                    <svg viewBox="0 0 180 180">
+                        <circle class="streak-ring-bg" cx="90" cy="90" r="78"></circle>
+                        <circle class="streak-ring-progress" cx="90" cy="90" r="78" 
+                            stroke-dasharray="490" 
+                            stroke-dashoffset="{% widthratio streak.current_streak 30 490 %}"></circle>
+                    </svg>
+                    <div class="streak-ring-center">
+                        <div class="streak-fire-icon">🔥</div>
+                        <div class="streak-big-number">{{ streak.current_streak }}</div>
+                        <div class="streak-unit">Day{% if streak.current_streak != 1 %}s{% endif %}</div>
+                    </div>
                 </div>
-                <div class="streak-stat-label">Last Read</div>
+                <div class="streak-panel-title">Current Streak</div>
+                <div class="streak-panel-subtitle">Keep reading daily to grow your flame!</div>
+            </div>
+        </div>
+        
+        <!-- Right Panel - Stats & Weekly Activity -->
+        <div class="streak-info-panel">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon best"><i class="fas fa-crown"></i></div>
+                    <div class="stat-value">{{ streak.longest_streak }}</div>
+                    <div class="stat-label">Best Streak</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon total"><i class="fas fa-calendar-check"></i></div>
+                    <div class="stat-value">{{ streak.total_reading_days }}</div>
+                    <div class="stat-label">Total Days</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon last"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value">{% if streak.last_read_date %}{{ streak.last_read_date|date:"M d" }}{% else %}--{% endif %}</div>
+                    <div class="stat-label">Last Read</div>
+                </div>
+            </div>
+            
+            <div class="weekly-activity">
+                <div class="weekly-header">
+                    <h4 class="weekly-title"><i class="fas fa-fire-alt"></i> This Week</h4>
+                    <div class="weekly-legend">
+                        <span class="legend-item"><span class="legend-dot active"></span> Active</span>
+                        <span class="legend-item"><span class="legend-dot inactive"></span> Missed</span>
+                    </div>
+                </div>
+                <div class="weekly-grid">
+                    {% load custom_filters %}
+                    {% with today=streak.last_read_date %}
+                    <div class="day-cell {% if streak.current_streak >= 7 %}active{% endif %}">
+                        <span class="day-name">Mon</span>
+                        <span class="day-date">24</span>
+                    </div>
+                    <div class="day-cell {% if streak.current_streak >= 6 %}active{% endif %}">
+                        <span class="day-name">Tue</span>
+                        <span class="day-date">25</span>
+                    </div>
+                    <div class="day-cell {% if streak.current_streak >= 5 %}active{% endif %}">
+                        <span class="day-name">Wed</span>
+                        <span class="day-date">26</span>
+                    </div>
+                    <div class="day-cell {% if streak.current_streak >= 4 %}active{% endif %}">
+                        <span class="day-name">Thu</span>
+                        <span class="day-date">27</span>
+                    </div>
+                    <div class="day-cell {% if streak.current_streak >= 3 %}active{% endif %}">
+                        <span class="day-name">Fri</span>
+                        <span class="day-date">28</span>
+                    </div>
+                    <div class="day-cell {% if streak.current_streak >= 2 %}active{% endif %}">
+                        <span class="day-name">Sat</span>
+                        <span class="day-date">01</span>
+                    </div>
+                    <div class="day-cell {% if streak.current_streak >= 1 %}active{% endif %} today">
+                        <span class="day-name">Sun</span>
+                        <span class="day-date">02</span>
+                    </div>
+                    {% endwith %}
+                </div>
             </div>
         </div>
     </div>
     
+    <!-- Milestones Section -->
     <div class="milestones-section">
-        <h3 class="milestones-title">
-            <i class="fas fa-trophy" style="color: var(--accent);"></i>
-            Streak Milestones
-        </h3>
+        <div class="milestones-header">
+            <h3 class="milestones-title">
+                <i class="fas fa-trophy"></i> Streak Milestones
+            </h3>
+            <span class="next-milestone">
+                {% if streak.total_reading_days < 7 %}{{ 7|add:"-"|add:streak.total_reading_days }} days to Week Warrior
+                {% elif streak.total_reading_days < 30 %}{{ 30|add:"-"|add:streak.total_reading_days }} days to Bronze
+                {% elif streak.total_reading_days < 90 %}{{ 90|add:"-"|add:streak.total_reading_days }} days to Silver
+                {% elif streak.total_reading_days < 150 %}{{ 150|add:"-"|add:streak.total_reading_days }} days to Gold
+                {% else %}All milestones achieved! 🎉
+                {% endif %}
+            </span>
+        </div>
         
-        <div class="milestones-grid">
-            <div class="milestone-card {% if streak.total_reading_days >= 7 %}achieved{% endif %}">
-                <div class="milestone-icon">🌟</div>
-                <div class="milestone-days">7 Days</div>
-                <div class="milestone-label">Week Warrior</div>
+        <div class="milestones-track">
+            <div class="milestone-line">
+                <div class="milestone-line-progress" style="width: {% widthratio streak.total_reading_days 150 100 %}%;"></div>
             </div>
-            <div class="milestone-card {% if streak.total_reading_days >= 30 %}achieved{% endif %}">
-                <div class="milestone-icon">🥉</div>
-                <div class="milestone-days">30 Days</div>
-                <div class="milestone-label">Bronze Reader</div>
+            
+            <div class="milestone-node {% if streak.total_reading_days >= 7 %}achieved{% elif streak.total_reading_days > 0 %}current{% endif %}">
+                <div class="milestone-circle">🌟</div>
+                <div class="milestone-info">
+                    <div class="milestone-days">7 Days</div>
+                    <div class="milestone-name">Week Warrior</div>
+                </div>
             </div>
-            <div class="milestone-card {% if streak.total_reading_days >= 90 %}achieved{% endif %}">
-                <div class="milestone-icon">🥈</div>
-                <div class="milestone-days">90 Days</div>
-                <div class="milestone-label">Silver Scholar</div>
+            
+            <div class="milestone-node {% if streak.total_reading_days >= 30 %}achieved{% elif streak.total_reading_days >= 7 %}current{% endif %}">
+                <div class="milestone-circle">🥉</div>
+                <div class="milestone-info">
+                    <div class="milestone-days">30 Days</div>
+                    <div class="milestone-name">Bronze Reader</div>
+                </div>
             </div>
-            <div class="milestone-card {% if streak.total_reading_days >= 150 %}achieved{% endif %}">
-                <div class="milestone-icon">🥇</div>
-                <div class="milestone-days">150 Days</div>
-                <div class="milestone-label">Gold Master</div>
+            
+            <div class="milestone-node {% if streak.total_reading_days >= 90 %}achieved{% elif streak.total_reading_days >= 30 %}current{% endif %}">
+                <div class="milestone-circle">🥈</div>
+                <div class="milestone-info">
+                    <div class="milestone-days">90 Days</div>
+                    <div class="milestone-name">Silver Scholar</div>
+                </div>
+            </div>
+            
+            <div class="milestone-node {% if streak.total_reading_days >= 150 %}achieved{% elif streak.total_reading_days >= 90 %}current{% endif %}">
+                <div class="milestone-circle">🥇</div>
+                <div class="milestone-info">
+                    <div class="milestone-days">150 Days</div>
+                    <div class="milestone-name">Gold Master</div>
+                </div>
             </div>
         </div>
         
-        <div class="encouragement">
-            {% if streak.current_streak == 0 %}
-            <p>📚 Start reading today to begin your streak!</p>
-            {% elif streak.current_streak < 7 %}
-            <p>🔥 Keep going! Only {{ 7|add:"-"|add:streak.current_streak }} more day{% if 7|add:"-"|add:streak.current_streak != 1 %}s{% endif %} to reach your first milestone!</p>
-            {% elif streak.current_streak < 30 %}
-            <p>🌟 Amazing! You're on fire! Keep reading to reach 30 days!</p>
-            {% elif streak.current_streak < 90 %}
-            <p>🥉 Incredible dedication! You're on your way to Silver Scholar!</p>
-            {% elif streak.current_streak < 150 %}
-            <p>🥈 Outstanding! Gold Master status is within reach!</p>
-            {% else %}
-            <p>🏆 LEGENDARY! You're a true reading champion!</p>
-            {% endif %}
+        <div class="tip-card">
+            <span class="tip-icon">💡</span>
+            <span class="tip-text">
+                {% if streak.current_streak == 0 %}
+                <strong>Tip:</strong> Start reading today to begin building your streak!
+                {% elif streak.current_streak < 7 %}
+                <strong>Almost there!</strong> Read daily to reach your first milestone.
+                {% elif streak.current_streak < streak.longest_streak %}
+                <strong>Challenge:</strong> Beat your best streak of {{ streak.longest_streak }} days!
+                {% else %}
+                <strong>New record!</strong> You're on your longest streak ever! Keep it up!
+                {% endif %}
+            </span>
         </div>
     </div>
 </div>

@@ -13,3 +13,16 @@ def admin_check(request):
     return {
         'is_admin_user': is_admin
     }
+
+
+def user_role(request):
+    """Add user role display to template context"""
+    if request.user.is_authenticated:
+        if request.user.is_staff or request.user.is_superuser or request.user.email in ADMIN_EMAILS:
+            display_role = 'Admin'
+        else:
+            display_role = 'User'
+        return {
+            'display_role': display_role
+        }
+    return {}

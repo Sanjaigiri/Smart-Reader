@@ -337,6 +337,18 @@
         margin-bottom: 2rem;
     }
     
+    /* Dark Mode Image Styling */
+    [data-theme="dark"] .article-img,
+    [data-theme="dark"] img {
+        filter: brightness(0.85) contrast(1.1);
+        transition: filter 0.3s ease;
+    }
+    
+    [data-theme="dark"] .article-img:hover,
+    [data-theme="dark"] img:hover {
+        filter: brightness(0.95) contrast(1.05);
+    }
+    
     @media (max-width: 1024px) {
         .features-grid,
         .articles-grid { grid-template-columns: repeat(2, 1fr); }
