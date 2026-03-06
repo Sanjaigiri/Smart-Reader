@@ -245,7 +245,7 @@
         color: #10b981;
     }
     
-    .status-badge.inactive {
+    .status-badge.deactive {
         background: rgba(239, 68, 68, 0.1);
         color: #ef4444;
     }
@@ -369,7 +369,7 @@
     
     .stat-mini-icon.total { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
     .stat-mini-icon.active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-    .stat-mini-icon.inactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .stat-mini-icon.deactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
     .stat-mini-icon.admin { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
     
     .stat-mini-content h4 {
@@ -435,10 +435,10 @@
                 </div>
             </div>
             <div class="stat-mini">
-                <div class="stat-mini-icon inactive"><i class="fas fa-ban"></i></div>
+                <div class="stat-mini-icon deactive"><i class="fas fa-ban"></i></div>
                 <div class="stat-mini-content">
                     <h4>{{ inactive_users }}</h4>
-                    <span>Inactive Users</span>
+                    <span>Deactive Users</span>
                 </div>
             </div>
             <div class="stat-mini">
@@ -497,7 +497,7 @@
                             {% if user.is_active %}
                             <span class="status-badge active">Active</span>
                             {% else %}
-                            <span class="status-badge inactive">Inactive</span>
+                            <span class="status-badge deactive">Deactive</span>
                             {% endif %}
                         </td>
                         <td>

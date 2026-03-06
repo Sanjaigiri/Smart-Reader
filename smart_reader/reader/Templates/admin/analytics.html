@@ -234,6 +234,323 @@
         grid-column: 1 / -1;
     }
     
+    .chart-card.compact {
+        padding: 1rem 1.5rem;
+    }
+    
+    .chart-card.compact .data-table td,
+    .chart-card.compact .data-table th {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .view-all-link {
+        display: block;
+        text-align: center;
+        padding: 0.6rem;
+        margin-top: 0.75rem;
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.85rem;
+        border-top: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+    
+    .view-all-link:hover {
+        background: var(--bg-secondary);
+        color: var(--primary-hover);
+    }
+    
+    /* Quick Stats Grid */
+    .quick-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0.75rem;
+    }
+    
+    .quick-stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+    }
+    
+    .quick-stat-item i {
+        font-size: 1.25rem;
+        color: var(--primary);
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(99, 102, 241, 0.1);
+        border-radius: 8px;
+    }
+    
+    .quick-stat-item:nth-child(1) i { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+    .quick-stat-item:nth-child(2) i { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+    .quick-stat-item:nth-child(3) i { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+    .quick-stat-item:nth-child(4) i { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+    .quick-stat-item:nth-child(5) i { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+    .quick-stat-item:nth-child(6) i { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    
+    .quick-stat-value small {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+    
+    .quick-stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .quick-stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .quick-stat-label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+    
+    /* Recent Users List */
+    .recent-users-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .recent-user-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    
+    .recent-user-item:hover {
+        background: var(--bg-secondary);
+    }
+    
+    .recent-user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .recent-user-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .recent-user-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+    
+    .recent-user-date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    /* Top Articles List */
+    .top-articles-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .top-article-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    
+    .top-article-item:hover {
+        background: var(--bg-secondary);
+    }
+    
+    .top-article-rank {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.8rem;
+        background: var(--bg-secondary);
+        color: var(--text-muted);
+    }
+    
+    .top-article-rank.gold { background: #fef3c7; color: #d97706; }
+    .top-article-rank.silver { background: #f3f4f6; color: #6b7280; }
+    .top-article-rank.bronze { background: #fed7aa; color: #c2410c; }
+    
+    .top-article-info {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .top-article-title {
+        font-weight: 500;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .top-article-meta {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+    
+    .top-article-meta i {
+        color: #f59e0b;
+        margin-right: 0.25rem;
+    }
+    
+    /* Progress Overview */
+    .progress-overview {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .progress-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+    
+    .progress-circle.completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .progress-circle.in-progress {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+    
+    .progress-stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .progress-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .progress-stat-label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+    
+    .progress-bar-container {
+        height: 8px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #34d399);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    
+    .progress-bar-label {
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin: 0;
+    }
+    
+    /* Difficulty Bars */
+    .difficulty-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .difficulty-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .difficulty-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        width: 80px;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        text-align: center;
+    }
+    
+    .difficulty-label.beginner { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .difficulty-label.intermediate { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .difficulty-label.advanced { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    
+    .difficulty-bar-bg {
+        flex: 1;
+        height: 8px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .difficulty-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+    
+    .difficulty-bar-fill.beginner { background: #10b981; }
+    .difficulty-bar-fill.intermediate { background: #f59e0b; }
+    .difficulty-bar-fill.advanced { background: #ef4444; }
+    
+    .difficulty-count {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        min-width: 50px;
+        text-align: right;
+    }
+    
     .chart-title {
         font-weight: 600;
         margin-bottom: 1rem;
@@ -461,7 +778,7 @@
                 </table>
             </div>
             
-            <div class="chart-card">
+            <div class="chart-card compact">
                 <h3 class="chart-title"><i class="fas fa-crown"></i> Top Active Users</h3>
                 <table class="data-table">
                     <thead>
@@ -489,6 +806,9 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                <a href="{% url 'admin_users' %}" class="view-all-link">
+                    <i class="fas fa-users"></i> View All Users
+                </a>
             </div>
             
             <div class="chart-card">
@@ -515,6 +835,47 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Top Rated & Most Bookmarked Articles -->
+            <div class="chart-card compact">
+                <h3 class="chart-title"><i class="fas fa-star"></i> Top Rated Articles</h3>
+                <div class="top-articles-list">
+                    {% for article in top_rated_articles %}
+                    <div class="top-article-item">
+                        <div class="top-article-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                            {{ forloop.counter }}
+                        </div>
+                        <div class="top-article-info">
+                            <span class="top-article-title">{{ article.title|truncatechars:30 }}</span>
+                            <span class="top-article-meta">
+                                <i class="fas fa-star"></i> {{ article.avg_score|floatformat:1 }} ({{ article.rating_count }} reviews)
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p style="text-align: center; color: var(--text-muted); padding: 1rem;">No rated articles yet</p>
+                    {% endfor %}
+                </div>
+                
+                <h3 class="chart-title" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);"><i class="fas fa-bookmark"></i> Most Bookmarked</h3>
+                <div class="top-articles-list">
+                    {% for article in most_bookmarked %}
+                    <div class="top-article-item">
+                        <div class="top-article-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                            {{ forloop.counter }}
+                        </div>
+                        <div class="top-article-info">
+                            <span class="top-article-title">{{ article.title|truncatechars:30 }}</span>
+                            <span class="top-article-meta">
+                                <i class="fas fa-bookmark"></i> {{ article.bookmark_count }} saves
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p style="text-align: center; color: var(--text-muted); padding: 1rem;">No bookmarked articles yet</p>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </main>

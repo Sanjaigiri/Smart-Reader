@@ -1217,6 +1217,17 @@ def profile(request):
         language = request.POST.get('language', 'EN').upper()
         profile.preferred_language = language
         
+        # Handle avatar upload
+        if 'avatar' in request.FILES:
+            avatar_file = request.FILES['avatar']
+            # Delete old avatar if it exists and is not the default
+            if profile.avatar and 'default' not in profile.avatar.name:
+                try:
+                    profile.avatar.delete(save=False)
+                except:
+                    pass
+            profile.avatar = avatar_file
+        
         profile.save()
         
         # Update user info
@@ -1490,9 +1501,32 @@ def my_streaks(request):
     reading_days = progress.values('last_read_at__date').distinct()
     reading_dates = [r['last_read_at__date'].isoformat() for r in reading_days if r['last_read_at__date']]
     
+    # Build weekly calendar data (Monday to Sunday)
+    from datetime import timedelta
+    # Get the start of the current week (Monday)
+    days_since_monday = today.weekday()  # Monday = 0, Sunday = 6
+    week_start = today - timedelta(days=days_since_monday)
+    
+    # Create list of days for the week with activity status
+    week_days = []
+    reading_dates_set = set(reading_dates)
+    for i in range(7):
+        day = week_start + timedelta(days=i)
+        day_name = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]
+        is_active = day.isoformat() in reading_dates_set
+        is_today = day == today
+        week_days.append({
+            'name': day_name,
+            'date': day.day,
+            'full_date': day,
+            'is_active': is_active,
+            'is_today': is_today,
+        })
+    
     context = {
         'streak': streak,
         'reading_dates': json.dumps(reading_dates),
+        'week_days': week_days,
     }
     return render(request, 'user/streaks.html', context)
 
@@ -1850,11 +1884,14 @@ def admin_users(request):
     # Filter by status
     status = request.GET.get('status', '')
     if status == 'active':
-        users = users.filter(is_active=True)
+        # Active regular users only (not staff/admin)
+        users = users.filter(is_active=True, is_staff=False, is_superuser=False)
     elif status == 'deactive':
+        # Deactivated users only
         users = users.filter(is_active=False)
     elif status == 'staff':
-        users = users.filter(is_staff=True)
+        # Staff and admins only
+        users = users.filter(Q(is_staff=True) | Q(is_superuser=True))
     
     # Pagination
     paginator = Paginator(users, 20)
@@ -1890,36 +1927,73 @@ def admin_toggle_user_status(request, user_id):
             # Send email notification only if status actually changed
             if previous_status != user.is_active:
                 status = 'activated' if user.is_active else 'deactivated'
+                admin_user = request.user
+                admin_name = admin_user.get_full_name() or admin_user.username
+                admin_email = admin_user.email
                 
                 # Email notification
-                subject = f'Account {status.capitalize()}'
+                subject = f'SmartReader Account {status.capitalize()} - Action Required'
                 if user.is_active:
-                    message = f"""
-Dear {user.first_name or user.username},
+                    message = f"""Dear {user.first_name or user.username},
 
-Your SmartReader account has been activated by an administrator.
+We are writing to inform you that your SmartReader account has been ACTIVATED.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACCOUNT STATUS: ACTIVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Account Details:
+• Username: {user.username}
+• Email: {user.email}
+• Status Changed: Active
+
+Action Performed By:
+• Administrator: {admin_name}
+• Admin Email: {admin_email}
 
 You can now log in and access all features of the platform.
 
 Login URL: http://127.0.0.1:8000/login/
 
-If you have any questions, please contact our support team.
+If you did not expect this change or have any questions, please contact our support team.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-SmartReader Team
+SmartReader Administration Team
+
+This is an automated message. Please do not reply directly to this email.
+For support, contact: {admin_email}
 """
                 else:
-                    message = f"""
-Dear {user.first_name or user.username},
+                    message = f"""Dear {user.first_name or user.username},
 
-Your SmartReader account has been deactivated by an administrator.
+We are writing to inform you that your SmartReader account has been DEACTIVATED.
 
-You will not be able to log in until your account is reactivated.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACCOUNT STATUS: DEACTIVATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-If you believe this is a mistake or have any questions, please contact our support team.
+Account Details:
+• Username: {user.username}
+• Email: {user.email}
+• Status Changed: Inactive
+
+Action Performed By:
+• Administrator: {admin_name}
+• Admin Email: {admin_email}
+
+You will not be able to log in until your account is reactivated by an administrator.
+
+If you believe this action was taken in error or have any questions, please contact the administrator at {admin_email}.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-SmartReader Team
+SmartReader Administration Team
+
+This is an automated message. Please do not reply directly to this email.
+For support, contact: {admin_email}
 """
                 
                 try:
@@ -2181,7 +2255,7 @@ def admin_analytics(request):
             'registrations': count
         })
     
-    # Top active users - Top 10 only
+    # Top active users - Top 1 only (compact view, change to 3 when more users)
     top_users = SiteVisit.objects.filter(
         visit_date__gte=start_date,
         user__isnull=False
@@ -2190,7 +2264,7 @@ def admin_analytics(request):
         'user__email'
     ).annotate(
         visit_count=Count('id')
-    ).order_by('-visit_count')[:10]
+    ).order_by('-visit_count')[:1]
     
     # Category distribution - Top 10 only
     category_stats = Article.objects.values('category__name').annotate(
@@ -2205,6 +2279,47 @@ def admin_analytics(request):
     
     # Average reading time per user
     avg_reading_time = total_reading_time // max(active_readers, 1)
+    
+    # Recent registrations (last 5 users)
+    recent_users = User.objects.order_by('-date_joined')[:5]
+    
+    # Unique project-specific stats
+    total_highlights = Highlight.objects.count()
+    total_notes = Note.objects.count()
+    total_feedbacks = Feedback.objects.count()
+    total_ratings = Rating.objects.count()
+    
+    # Average rating across all articles
+    from django.db.models import Avg
+    avg_rating = Rating.objects.aggregate(avg=Avg('score'))['avg'] or 0
+    
+    # Achievements earned
+    total_achievements = UserAchievement.objects.count()
+    
+    # Reading lists created
+    total_reading_lists = ReadingList.objects.count()
+    
+    # Top rated articles (for display)
+    top_rated_articles = Article.objects.annotate(
+        avg_score=Avg('ratings__score'),
+        rating_count=Count('ratings')
+    ).filter(rating_count__gt=0).order_by('-avg_score')[:3]
+    
+    # Most bookmarked articles
+    most_bookmarked = Article.objects.annotate(
+        bookmark_count=Count('bookmarks')
+    ).filter(bookmark_count__gt=0).order_by('-bookmark_count')[:5]
+    
+    # Article difficulty distribution
+    difficulty_stats = Article.objects.values('difficulty').annotate(
+        count=Count('id')
+    ).order_by('difficulty')
+    
+    # Reading progress stats
+    in_progress_reads = ReadingProgress.objects.filter(is_completed=False).count()
+    completed_reads = ReadingProgress.objects.filter(is_completed=True).count()
+    total_reads = in_progress_reads + completed_reads
+    completion_rate = round((completed_reads / total_reads * 100) if total_reads > 0 else 0)
     
     context = {
         'period': period,
@@ -2222,6 +2337,20 @@ def admin_analytics(request):
         'top_users': top_users,
         'total_reading_time': total_reading_time,
         'avg_reading_time': avg_reading_time,
+        'recent_users': recent_users,
+        'total_highlights': total_highlights,
+        'total_notes': total_notes,
+        'total_feedbacks': total_feedbacks,
+        'total_ratings': total_ratings,
+        'avg_rating': round(avg_rating, 1),
+        'total_achievements': total_achievements,
+        'total_reading_lists': total_reading_lists,
+        'top_rated_articles': top_rated_articles,
+        'most_bookmarked': most_bookmarked,
+        'difficulty_stats': difficulty_stats,
+        'in_progress_reads': in_progress_reads,
+        'completed_reads': completed_reads,
+        'completion_rate': completion_rate,
     }
     return render(request, 'admin/analytics.html', context)
 

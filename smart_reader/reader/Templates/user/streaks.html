@@ -485,37 +485,12 @@
                     </div>
                 </div>
                 <div class="weekly-grid">
-                    {% load custom_filters %}
-                    {% with today=streak.last_read_date %}
-                    <div class="day-cell {% if streak.current_streak >= 7 %}active{% endif %}">
-                        <span class="day-name">Mon</span>
-                        <span class="day-date">24</span>
+                    {% for day in week_days %}
+                    <div class="day-cell {% if day.is_active %}active{% endif %} {% if day.is_today %}today{% endif %}">
+                        <span class="day-name">{{ day.name }}</span>
+                        <span class="day-date">{{ day.date|stringformat:"02d" }}</span>
                     </div>
-                    <div class="day-cell {% if streak.current_streak >= 6 %}active{% endif %}">
-                        <span class="day-name">Tue</span>
-                        <span class="day-date">25</span>
-                    </div>
-                    <div class="day-cell {% if streak.current_streak >= 5 %}active{% endif %}">
-                        <span class="day-name">Wed</span>
-                        <span class="day-date">26</span>
-                    </div>
-                    <div class="day-cell {% if streak.current_streak >= 4 %}active{% endif %}">
-                        <span class="day-name">Thu</span>
-                        <span class="day-date">27</span>
-                    </div>
-                    <div class="day-cell {% if streak.current_streak >= 3 %}active{% endif %}">
-                        <span class="day-name">Fri</span>
-                        <span class="day-date">28</span>
-                    </div>
-                    <div class="day-cell {% if streak.current_streak >= 2 %}active{% endif %}">
-                        <span class="day-name">Sat</span>
-                        <span class="day-date">01</span>
-                    </div>
-                    <div class="day-cell {% if streak.current_streak >= 1 %}active{% endif %} today">
-                        <span class="day-name">Sun</span>
-                        <span class="day-date">02</span>
-                    </div>
-                    {% endwith %}
+                    {% endfor %}
                 </div>
             </div>
         </div>
