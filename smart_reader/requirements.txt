@@ -3,3 +3,7 @@ python-dotenv==1.0.0
 Pillow
 deep-translator==1.11.4
 sendgrid>=6.10.0
+gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary

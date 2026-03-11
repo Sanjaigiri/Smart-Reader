@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: smart-reader
+    runtime: python
+    rootDir: smart_reader
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn smart_reader.wsgi:application"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smart-reader-db
+          property: connectionString
+
+databases:
+  - name: smart-reader-db
+    plan: free
+    databaseName: smartreader
