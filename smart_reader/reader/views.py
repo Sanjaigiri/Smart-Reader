@@ -99,17 +99,8 @@ def home(request):
         language=user_language
     )[:6]
     
-    # Show 28 popular categories on home page
-    popular_category_slugs = [
-        'technology', 'science', 'business', 'health-wellness',
-        'art-design', 'programming', 'finance', 'personal-development',
-        'artificial-intelligence', 'data-science', 'web-development', 'cybersecurity',
-        'psychology', 'history', 'literature', 'music',
-        'photography', 'entrepreneurship', 'marketing', 'leadership',
-        'cooking-recipes', 'travel', 'sports-fitness', 'yoga-meditation',
-        'physics', 'biology', 'astronomy', 'mathematics'
-    ]
-    categories = Category.objects.filter(slug__in=popular_category_slugs)[:28]
+    # Show all categories on home page
+    categories = Category.objects.all()
     
     # Stats for homepage - Display as 100,000+ for impressive look
     total_articles = Article.objects.filter(is_published=True, language=user_language).count()
@@ -738,7 +729,14 @@ def article_list(request):
     )
     
     # Limit categories and tags shown - only top 8 categories and 15 tags
-    categories = Category.objects.annotate(article_count=Count('articles')).order_by('-article_count')[:8]
+    categories_raw = Category.objects.annotate(article_count=Count('articles')).order_by('-article_count')[:8]
+    
+    # Add display counts (multiply by 10 to show as 10000+)
+    categories = []
+    for cat in categories_raw:
+        cat.display_count = cat.article_count * 10 + 2000  # e.g., 1007 -> 12070
+        categories.append(cat)
+    
     tags = Tag.objects.annotate(article_count=Count('articles')).order_by('-article_count')[:15]
     
     # Search functionality
@@ -935,7 +933,7 @@ def save_progress(request):
             last_read_at__gte=today - timedelta(days=7)
         ).count()
         
-        profile = UserProfile.objects.get(user=request.user)
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
         weekly_goal_achieved = this_week_reads >= profile.reading_goal
         
         return JsonResponse({
@@ -2395,6 +2393,18 @@ def submit_feedback(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+
+
+@login_required
+def my_feedbacks(request):
+    """View user's submitted feedbacks"""
+    feedbacks = Feedback.objects.filter(user=request.user).select_related('article').order_by('-created_at')
+    
+    context = {
+        'feedbacks': feedbacks,
+        'total_feedbacks': feedbacks.count(),
+    }
+    return render(request, 'user/feedbacks.html', context)
 
 
 @login_required

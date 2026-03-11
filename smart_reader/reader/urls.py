@@ -44,6 +44,7 @@ urlpatterns = [
     
     # Feedback
     path('submit-feedback/', views.submit_feedback, name='submit_feedback'),
+    path('my-feedbacks/', views.my_feedbacks, name='my_feedbacks'),
     
     # Search Autocomplete
     path('api/search-suggestions/', views.search_suggestions, name='search_suggestions'),

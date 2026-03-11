@@ -4,7 +4,7 @@
 {% block title %}{{ article.title }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/article_read.css' %}">
+<link rel="stylesheet" href="{% static 'css/article_read.css' %}?v=20260311">
 <style>
     .reading-page {
         display: grid;
@@ -828,16 +828,16 @@
 
 <!-- Selection Popup -->
 <div class="selection-popup" id="selectionPopup">
-    <button onclick="highlightSelection('yellow')" style="background: #fef08a;" title="Yellow highlight">
+    <button onmousedown="event.preventDefault(); event.stopPropagation(); highlightSelection('yellow')" style="background: #fef08a;" title="Yellow highlight">
         <i class="fas fa-highlighter"></i>
     </button>
-    <button onclick="highlightSelection('green')" style="background: #86efac;" title="Green highlight">
+    <button onmousedown="event.preventDefault(); event.stopPropagation(); highlightSelection('green')" style="background: #86efac;" title="Green highlight">
         <i class="fas fa-highlighter"></i>
     </button>
-    <button onclick="highlightSelection('blue')" style="background: #93c5fd;" title="Blue highlight">
+    <button onmousedown="event.preventDefault(); event.stopPropagation(); highlightSelection('blue')" style="background: #93c5fd;" title="Blue highlight">
         <i class="fas fa-highlighter"></i>
     </button>
-    <button onclick="addNoteFromSelection()" title="Add note">
+    <button onmousedown="event.preventDefault(); event.stopPropagation(); addNoteFromSelection()" title="Add note">
         <i class="fas fa-sticky-note"></i>
     </button>
 </div>
@@ -996,7 +996,7 @@
             </div>
             
             <div class="progress" style="margin-bottom: 1rem;">
-                <div class="progress-bar" id="sidebarProgress" style="width: 0%"></div>
+                <div class="progress-bar" id="sidebarProgress" style="width: {% if progress.is_completed %}100{% else %}{{ progress.max_scroll_percentage|default:0 }}{% endif %}%"></div>
             </div>
             
             {% if progress.is_completed %}
@@ -1015,11 +1015,11 @@
                 Select text to highlight or add notes
             </p>
             <div class="highlight-tools">
-                <button class="highlight-btn yellow" data-color="yellow" title="Yellow"></button>
-                <button class="highlight-btn green" data-color="green" title="Green"></button>
-                <button class="highlight-btn blue" data-color="blue" title="Blue"></button>
-                <button class="highlight-btn pink" data-color="pink" title="Pink"></button>
-                <button class="highlight-btn orange" data-color="orange" title="Orange"></button>
+                <button class="highlight-btn yellow active" data-color="yellow" title="Yellow" onmousedown="event.preventDefault(); event.stopPropagation(); selectHighlightColor('yellow', this)"></button>
+                <button class="highlight-btn green" data-color="green" title="Green" onmousedown="event.preventDefault(); event.stopPropagation(); selectHighlightColor('green', this)"></button>
+                <button class="highlight-btn blue" data-color="blue" title="Blue" onmousedown="event.preventDefault(); event.stopPropagation(); selectHighlightColor('blue', this)"></button>
+                <button class="highlight-btn pink" data-color="pink" title="Pink" onmousedown="event.preventDefault(); event.stopPropagation(); selectHighlightColor('pink', this)"></button>
+                <button class="highlight-btn orange" data-color="orange" title="Orange" onmousedown="event.preventDefault(); event.stopPropagation(); selectHighlightColor('orange', this)"></button>
             </div>
         </div>
         {% endif %}
@@ -1129,7 +1129,8 @@
 {% block extra_js %}
 <script>
     // Pass Django context to JavaScript - these values are needed by the external script
-    const initialTimeFromDb = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
+    window.initialTimeFromDb = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
+    console.log('SmartReader Template Loaded - Version fix3');
 </script>
-<script src="{% static 'js/article_read.js' %}"></script>
+<script src="{% static 'js/article_read.js' %}?v=fix3"></script>
 {% endblock %}

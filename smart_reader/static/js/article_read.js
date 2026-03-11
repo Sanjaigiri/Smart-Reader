@@ -19,33 +19,80 @@ const csrftoken = getCookie('csrftoken');
 // Initialize from page data
 let articleId, articleContent, startTime, lastSaveTime, selectedColor;
 let initialTimeFromDb, maxProgressReached, totalTimeOnPage, pageStartTime, lastDisplayUpdate;
-let scrollTimeout;
+let scrollTimeout, progressSaveInFlight, savedSelectionRange;
+
+function getProgressStorageKey() {
+    return articleId ? `smartreader-progress-${articleId}` : null;
+}
+
+function readLocalProgress() {
+    const key = getProgressStorageKey();
+    if (!key) return null;
+
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        console.error('Failed to read local progress:', error);
+        return null;
+    }
+}
+
+function writeLocalProgress(progress) {
+    const key = getProgressStorageKey();
+    if (!key) return;
+
+    try {
+        localStorage.setItem(key, JSON.stringify(progress));
+    } catch (error) {
+        console.error('Failed to write local progress:', error);
+    }
+}
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    articleId = document.getElementById('articleId').value;
+    console.log('SmartReader: Initializing article reader...');
+    
+    // Get article ID first
+    const articleIdEl = document.getElementById('articleId');
+    if (!articleIdEl) {
+        console.error('Article ID element not found');
+        return;
+    }
+    articleId = articleIdEl.value;
     articleContent = document.getElementById('articleContent');
     startTime = Date.now();
     lastSaveTime = Date.now();
     selectedColor = 'yellow';
     
-    // Get progress values
-    initialTimeFromDb = parseInt(document.getElementById('articleContent').dataset.initialTime) || 0;
-    maxProgressReached = parseInt(document.getElementById('maxProgress').value) || 0;
+    // Get progress values - initialTimeFromDb is set as global var in template
+    initialTimeFromDb = typeof window.initialTimeFromDb !== 'undefined' ? Number(window.initialTimeFromDb) : 0;
+    
+    const maxProgressEl = document.getElementById('maxProgress');
+    maxProgressReached = maxProgressEl ? parseInt(maxProgressEl.value) || 0 : 0;
+    const localProgress = readLocalProgress();
+    if (localProgress) {
+        initialTimeFromDb = Math.max(initialTimeFromDb, Number(localProgress.timeSpent) || 0);
+        maxProgressReached = Math.max(maxProgressReached, Number(localProgress.maxProgress) || 0);
+    }
     
     // Track total time on page
     totalTimeOnPage = initialTimeFromDb;
     pageStartTime = Date.now();
     lastDisplayUpdate = Date.now();
+    progressSaveInFlight = false;
+    savedSelectionRange = null;
     
     // Scroll to last position
-    const lastPos = parseInt(document.getElementById('lastPosition').value) || 0;
+    const lastPosEl = document.getElementById('lastPosition');
+    const lastPos = lastPosEl ? parseInt(lastPosEl.value) || 0 : 0;
     if (lastPos > 0) {
         window.scrollTo(0, lastPos);
     }
     
-    // Update display with max progress
-    updateProgressDisplay(maxProgressReached);
+    // Update display immediately
+    updateProgress();
+    updateTimeDisplay();
     
     // Style the last paragraph as conclusion
     styleConclusionParagraph();
@@ -53,15 +100,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up event listeners
     setupEventListeners();
     
-    // Start time tracking
-    setInterval(updateTimeDisplay, 1000);
-    setInterval(saveProgress, 60000);
-    setInterval(() => {
-        const timeActive = Math.floor((Date.now() - lastSaveTime) / 1000);
-        if (timeActive >= 30) {
-            saveProgress();
-        }
+    // Start time tracking - update every second
+    setInterval(function() {
+        updateTimeDisplay();
+        updateProgress(); // Also update progress every second for real-time display
+    }, 1000);
+    
+    // Auto-save progress every 30 seconds
+    setInterval(function() {
+        saveProgress();
     }, 30000);
+    
+    console.log('SmartReader: Initialized! Time:', initialTimeFromDb, 'Progress:', maxProgressReached + '%');
 });
 
 // Notification System
@@ -144,14 +194,6 @@ function styleConclusionParagraph() {
     }
 }
 
-// Update progress display
-function updateProgressDisplay(percentage) {
-    const sidebarProgress = document.getElementById('sidebarProgress');
-    const progressPercent = document.getElementById('progressPercent');
-    if (sidebarProgress) sidebarProgress.style.width = percentage + '%';
-    if (progressPercent) progressPercent.textContent = percentage + '%';
-}
-
 // Check if user has reached conclusion
 function hasReachedConclusion() {
     const conclusionEl = document.querySelector('.conclusion-paragraph');
@@ -169,23 +211,38 @@ function updateProgress() {
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
     
     let currentPercentage;
-    if (scrollTop + 10 >= docHeight) {
+    if (docHeight <= 0) {
+        currentPercentage = 100;
+    } else if (scrollTop + 10 >= docHeight) {
         currentPercentage = 100;
     } else {
         currentPercentage = Math.min(100, Math.round((scrollTop / docHeight) * 100));
     }
     
-    document.getElementById('progressBar').style.width = currentPercentage + '%';
+    // Update top progress bar with current position
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        progressBar.style.width = currentPercentage + '%';
+    }
     
+    // Always update sidebar to show CURRENT scroll position for real-time feedback
+    updateProgressDisplay(currentPercentage);
+    
+    // Update max progress reached (for saving)
     if (currentPercentage > maxProgressReached) {
         maxProgressReached = currentPercentage;
-        updateProgressDisplay(maxProgressReached);
     }
     
     if (hasReachedConclusion() && maxProgressReached < 100) {
         maxProgressReached = 100;
         updateProgressDisplay(100);
     }
+
+    writeLocalProgress({
+        maxProgress: maxProgressReached,
+        timeSpent: initialTimeFromDb + Math.floor((Date.now() - pageStartTime) / 1000),
+        lastPosition: scrollTop
+    });
     
     return { scrollTop, currentPercentage, maxPercentage: maxProgressReached };
 }
@@ -198,10 +255,31 @@ function updateTimeDisplay() {
     if (timeSpentEl) {
         timeSpentEl.textContent = displayTime;
     }
+    // Also update sidebar progress to make sure it's in sync
+    updateProgressDisplay(maxProgressReached);
+    writeLocalProgress({
+        maxProgress: maxProgressReached,
+        timeSpent: displayTime,
+        lastPosition: window.scrollY || 0
+    });
+}
+
+// Update progress display
+function updateProgressDisplay(percentage) {
+    const sidebarProgress = document.getElementById('sidebarProgress');
+    const progressPercent = document.getElementById('progressPercent');
+    if (sidebarProgress) {
+        sidebarProgress.style.width = percentage + '%';
+    }
+    if (progressPercent) {
+        progressPercent.textContent = percentage + '%';
+    }
 }
 
 // Save progress
 function saveProgress() {
+    if (!articleId || progressSaveInFlight) return;
+
     const { scrollTop, currentPercentage, maxPercentage } = updateProgress();
     const currentTime = Date.now();
     const timeSpent = Math.floor((currentTime - lastSaveTime) / 1000);
@@ -210,6 +288,8 @@ function saveProgress() {
     
     totalTimeOnPage = initialTimeFromDb + Math.floor((Date.now() - pageStartTime) / 1000);
     
+    progressSaveInFlight = true;
+
     fetch('/save-progress/', {
         method: 'POST',
         headers: {
@@ -232,12 +312,30 @@ function saveProgress() {
         }
         if (data.total_time) {
             totalTimeOnPage = data.total_time;
+            initialTimeFromDb = data.total_time;
+            pageStartTime = Date.now();
+            updateTimeDisplay();
         }
+        writeLocalProgress({
+            maxProgress: maxProgressReached,
+            timeSpent: data.total_time || totalTimeOnPage,
+            lastPosition: scrollTop
+        });
         if (data.just_completed) {
             showCompletionNotification(data);
         }
     })
-    .catch(err => console.error('Error saving progress:', err));
+    .catch(err => {
+        console.error('Error saving progress:', err);
+        writeLocalProgress({
+            maxProgress: maxProgressReached,
+            timeSpent: totalTimeOnPage,
+            lastPosition: scrollTop
+        });
+    })
+    .finally(() => {
+        progressSaveInFlight = false;
+    });
 }
 
 // Show completion notification
@@ -302,47 +400,182 @@ function createConfetti() {
 }
 
 // Highlight selection
-function highlightSelection(color) {
+function getActiveSelectionRange() {
     const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
+    
+    // First, try current selection
+    if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        const text = selection.toString();
-        
-        const mark = document.createElement('mark');
-        mark.className = 'highlight-' + color;
-        range.surroundContents(mark);
-        
-        fetch('/save-highlight/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                article_id: articleId,
-                text: text,
-                color: color
-            })
-        });
-        
-        const selectionPopup = document.getElementById('selectionPopup');
-        selectionPopup.classList.remove('active');
-        selection.removeAllRanges();
+        const text = selection.toString().trim();
+        if (text && articleContent && articleContent.contains(range.commonAncestorContainer)) {
+            savedSelectionRange = range.cloneRange();
+            return savedSelectionRange;
+        }
+    }
+    
+    // Fall back to saved selection
+    if (savedSelectionRange) {
+        try {
+            const text = savedSelectionRange.toString().trim();
+            if (text) {
+                return savedSelectionRange;
+            }
+        } catch (e) {
+            savedSelectionRange = null;
+        }
+    }
+    
+    return null;
+}
+
+function applyHighlightToRange(range, color) {
+    if (!range) return false;
+    
+    const mark = document.createElement('mark');
+    mark.className = 'highlight-' + color;
+    mark.style.cursor = 'pointer';
+
+    try {
+        // Clone the range to avoid modifying the original
+        const workingRange = range.cloneRange();
+        workingRange.surroundContents(mark);
+        return true;
+    } catch (error) {
+        try {
+            const workingRange = range.cloneRange();
+            const fragment = workingRange.extractContents();
+            mark.appendChild(fragment);
+            workingRange.insertNode(mark);
+            return true;
+        } catch (fallbackError) {
+            console.error('Error applying highlight:', fallbackError);
+            return false;
+        }
+    }
+}
+
+function highlightSelection(color) {
+    const range = getActiveSelectionRange();
+    if (!range) {
+        showToast('Select some article text first.', 'warning', 2000);
+        return;
+    }
+
+    const text = range.toString().trim();
+    if (!text) {
+        showToast('Select some article text first.', 'warning', 2000);
+        return;
+    }
+
+    const applied = applyHighlightToRange(range, color);
+    if (!applied) {
+        showToast('This selection could not be highlighted. Try a shorter selection.', 'error', 2500);
+        return;
+    }
+
+    fetch('/save-highlight/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+            article_id: articleId,
+            text: text,
+            color: color
+        })
+    })
+    .then(response => response.json())
+    .then(() => {
         showToast('Highlight saved successfully!', 'success', 2000);
+    })
+    .catch(() => {
+        showToast('Highlight added on page, but saving failed.', 'warning', 2500);
+    });
+
+    const selection = window.getSelection();
+    if (selection) {
+        selection.removeAllRanges();
+    }
+
+    savedSelectionRange = null;
+    const selectionPopup = document.getElementById('selectionPopup');
+    if (selectionPopup) {
+        selectionPopup.classList.remove('active');
     }
 }
 
 // Add note from selection
 function addNoteFromSelection() {
-    const selection = window.getSelection();
-    const text = selection.toString().trim();
+    const range = getActiveSelectionRange();
+    const text = range ? range.toString().trim() : '';
     
     if (text) {
         document.getElementById('selectedTextInput').value = text;
         document.querySelector('.note-form textarea').focus();
     }
     
-    document.getElementById('selectionPopup').classList.remove('active');
+    const selectionPopup = document.getElementById('selectionPopup');
+    if (selectionPopup) {
+        selectionPopup.classList.remove('active');
+    }
+}
+
+// Select highlight color from sidebar
+function selectHighlightColor(color, btn) {
+    // Update selected color
+    selectedColor = color;
+    
+    // Update active state on buttons
+    document.querySelectorAll('.highlight-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Try to get the saved selection range
+    const range = savedSelectionRange;
+    const text = range ? range.toString().trim() : '';
+    
+    if (text && text.length > 0) {
+        // Apply highlight with the selected color
+        const applied = applyHighlightToRange(range, color);
+        if (applied) {
+            // Save to server
+            fetch('/save-highlight/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    article_id: articleId,
+                    text: text,
+                    color: color
+                })
+            })
+            .then(response => response.json())
+            .then(() => {
+                showToast('Highlighted with ' + color + '!', 'success', 2000);
+            })
+            .catch(() => {
+                showToast('Highlight applied but save failed.', 'warning', 2500);
+            });
+            
+            // Clear selection
+            const selection = window.getSelection();
+            if (selection) {
+                selection.removeAllRanges();
+            }
+            savedSelectionRange = null;
+            
+            const selectionPopup = document.getElementById('selectionPopup');
+            if (selectionPopup) {
+                selectionPopup.classList.remove('active');
+            }
+        } else {
+            showToast('Could not highlight. Try a simpler selection.', 'error', 2500);
+        }
+    } else {
+        showToast(`${color.charAt(0).toUpperCase() + color.slice(1)} selected. Now select text in the article.`, 'info', 2000);
+    }
 }
 
 // Bookmark toggle
@@ -372,6 +605,29 @@ function toggleBookmark() {
     });
 }
 
+// Preview stars on hover
+function previewStars(count) {
+    document.querySelectorAll('.star-rating i[data-article-rating]').forEach((star, index) => {
+        if (index < count) {
+            star.style.color = '#fbbf24';
+            star.style.transform = 'scale(1.1)';
+        } else {
+            star.style.color = '#d1d5db';
+            star.style.transform = 'scale(1)';
+        }
+    });
+}
+
+// Reset stars to default
+function resetStars() {
+    document.querySelectorAll('.star-rating i[data-article-rating]').forEach((star) => {
+        if (!star.classList.contains('fas')) {
+            star.style.color = '#d1d5db';
+        }
+        star.style.transform = 'scale(1)';
+    });
+}
+
 // Rate article
 function rateArticle(score) {
     const emojiMap = {
@@ -382,7 +638,8 @@ function rateArticle(score) {
         5: { emoji: '🤩', message: 'Awesome! You\'re amazing! Thanks for the 5 stars!' }
     };
     
-    document.querySelectorAll('.star-rating i[data-article-rating]').forEach((star, index) => {
+    const stars = document.querySelectorAll('.star-rating i[data-article-rating]');
+    stars.forEach((star, index) => {
         if (index < score) {
             star.classList.remove('far');
             star.classList.add('fas');
@@ -391,14 +648,18 @@ function rateArticle(score) {
         } else {
             star.classList.remove('fas');
             star.classList.add('far');
-            star.style.color = 'inherit';
+            star.style.color = '#d1d5db';
             star.style.textShadow = 'none';
         }
     });
     
-    const emoji = emojiMap[score];
-    document.getElementById('ratingEmoji').textContent = emoji.emoji;
-    document.getElementById('ratingMessage').textContent = emoji.message;
+    const emojiEl = document.getElementById('ratingEmoji');
+    const messageEl = document.getElementById('ratingMessage');
+    
+    if (emojiEl && emojiMap[score]) {
+        emojiEl.textContent = emojiMap[score].emoji;
+        messageEl.textContent = emojiMap[score].message;
+    }
     
     fetch('/rate-article/', {
         method: 'POST',
@@ -413,7 +674,14 @@ function rateArticle(score) {
     })
     .then(response => response.json())
     .then(data => {
-        document.querySelector('.avg-rating').textContent = data.avg_rating;
+        const avgRatingEl = document.querySelector('.avg-rating');
+        if (avgRatingEl && data.avg_rating) {
+            avgRatingEl.textContent = data.avg_rating;
+        }
+        showToast('Rating saved!', 'success', 2000);
+    })
+    .catch(err => {
+        showToast('Failed to save rating', 'error', 2000);
     });
 }
 
@@ -476,31 +744,47 @@ function togglePurchaseDropdown(event) {
 
 // Set up event listeners
 function setupEventListeners() {
-    // Scroll handler
+    // Scroll handler - use passive for performance, update immediately
+    let lastScrollTime = 0;
     window.addEventListener('scroll', () => {
+        const now = Date.now();
+        // Update display on every scroll for real-time feedback
         updateProgress();
+        updateTimeDisplay();
+        
+        // Debounce save to reduce server calls
         clearTimeout(scrollTimeout);
         scrollTimeout = setTimeout(saveProgress, 1000);
-    });
+    }, { passive: true });
+    
+    // Also update on any user interaction
+    document.addEventListener('click', updateProgress);
     
     // Selection popup
     if (articleContent) {
-        articleContent.addEventListener('mouseup', (e) => {
-            const selection = window.getSelection();
-            if (selection.toString().trim().length > 0) {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                
-                const selectionPopup = document.getElementById('selectionPopup');
-                selectionPopup.style.top = (rect.top + window.scrollY - 50) + 'px';
-                selectionPopup.style.left = (rect.left + rect.width / 2 - 80) + 'px';
-                selectionPopup.classList.add('active');
-            } else {
-                const selectionPopup = document.getElementById('selectionPopup');
-                selectionPopup.classList.remove('active');
-            }
+        articleContent.addEventListener('mouseup', function(e) {
+            // Small delay to ensure selection is complete
+            setTimeout(updateSelectionPopup, 10);
+        });
+        articleContent.addEventListener('keyup', updateSelectionPopup);
+        
+        // Track selection more aggressively
+        articleContent.addEventListener('mousedown', function() {
+            // Clear old selection on new mousedown
+            savedSelectionRange = null;
         });
     }
+
+    document.addEventListener('selectionchange', () => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+
+        const text = selection.toString().trim();
+        const range = selection.getRangeAt(0);
+        if (text && articleContent && articleContent.contains(range.commonAncestorContainer)) {
+            savedSelectionRange = range.cloneRange();
+        }
+    });
     
     // Global click handler
     document.addEventListener('click', function(event) {
@@ -513,8 +797,37 @@ function setupEventListeners() {
         if (ratingStar) {
             const rating = parseInt(ratingStar.getAttribute('data-rating'));
             rateArticle(rating);
+            // Update stored rating after clicking
+            window.currentArticleRating = rating;
         }
     });
+    
+    // Star rating hover preview
+    const starRatingContainer = document.querySelector('.star-rating');
+    if (starRatingContainer) {
+        // Get any existing rating
+        window.currentArticleRating = 0;
+        document.querySelectorAll('.star-rating i.fas[data-article-rating]').forEach((star, index) => {
+            window.currentArticleRating = index + 1;
+        });
+        
+        starRatingContainer.addEventListener('mouseover', function(e) {
+            const star = e.target.closest('[data-article-rating]');
+            if (star) {
+                const hoverRating = parseInt(star.getAttribute('data-rating'));
+                previewStars(hoverRating);
+            }
+        });
+        
+        starRatingContainer.addEventListener('mouseout', function() {
+            // Restore current rating
+            if (window.currentArticleRating > 0) {
+                previewStars(window.currentArticleRating);
+            } else {
+                resetStars();
+            }
+        });
+    }
     
     // Notification backdrop click
     const backdrop = document.getElementById('notificationBackdrop');
@@ -524,4 +837,30 @@ function setupEventListeners() {
     
     // Save progress before leaving
     window.addEventListener('beforeunload', saveProgress);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            saveProgress();
+        }
+    });
+}
+
+function updateSelectionPopup() {
+    const selectionPopup = document.getElementById('selectionPopup');
+    if (!selectionPopup) return;
+
+    const range = getActiveSelectionRange();
+    if (!range || !range.toString().trim()) {
+        selectionPopup.classList.remove('active');
+        return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (!rect || (!rect.width && !rect.height)) {
+        selectionPopup.classList.remove('active');
+        return;
+    }
+
+    selectionPopup.style.top = (rect.top + window.scrollY - 50) + 'px';
+    selectionPopup.style.left = (rect.left + rect.width / 2 - 80) + 'px';
+    selectionPopup.classList.add('active');
 }

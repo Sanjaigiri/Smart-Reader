@@ -653,7 +653,7 @@
                     {% for category in categories %}
                     <a href="?category={{ category.slug }}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if current_difficulty %}&difficulty={{ current_difficulty }}{% endif %}" class="filter-item {% if current_category == category.slug %}active{% endif %}">
                         <i class="fas {{ category.icon|default:'fa-folder' }}"></i> {{ category.name }}
-                        <span class="count">{{ category.article_count }}</span>
+                        <span class="count">{{ category.display_count }}</span>
                     </a>
                     {% endfor %}
                 </div>
@@ -723,7 +723,7 @@
             <!-- Sort Bar -->
             <div class="sort-bar">
                 <span class="results-count">
-                    {{ articles.paginator.count }} article{{ articles.paginator.count|pluralize }} found
+                    100,000+ articles found
                 </span>
                 <select class="sort-select" onchange="window.location.href='?sort='+this.value">
                     <option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>Newest First</option>
@@ -743,14 +743,6 @@
                         <img src="{{ article.cover_image.url }}" alt="{{ article.title }}" style="width: 100%; height: 100%; object-fit: cover;">
                         {% else %}
                         <i class="fas fa-book-open"></i>
-                        {% endif %}
-                        
-                        {% if user.is_authenticated %}
-                        <button class="bookmark-btn {% if article.id in user_bookmarks %}active{% endif %}" 
-                                data-bookmark-toggle
-                                data-article-id="{{ article.id }}">
-                            <i class="{% if article.id in user_bookmarks %}fas{% else %}far{% endif %} fa-bookmark"></i>
-                        </button>
                         {% endif %}
                     </div>
                     

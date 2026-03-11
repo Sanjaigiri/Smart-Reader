@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}My Feedback{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .page-header-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .page-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-header .stats {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1rem;
+    }
+    
+    .page-header .stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .page-header .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .feedbacks-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    /* Feedback Grid */
+    .feedbacks-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .feedback-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        transition: all 0.3s;
+    }
+    
+    .feedback-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+    
+    .feedback-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .feedback-article {
+        font-size: 0.9rem;
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .feedback-article:hover {
+        text-decoration: underline;
+    }
+    
+    .feedback-date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .feedback-content {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: var(--text-primary);
+        padding: 1rem;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+    }
+    
+    .feedback-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .feedback-badge.helpful {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .feedback-badge.not-helpful {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    
+    .feedback-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        grid-column: 1 / -1;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 640px) {
+        .feedbacks-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .page-header .stats {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-content">
+        <h1 style="display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fas fa-comment-dots"></i>
+            <span>My Feedback</span>
+        </h1>
+        <p>All feedback you've shared on articles</p>
+        <div class="stats">
+            <div class="stat">
+                <i class="fas fa-comments"></i>
+                <span class="stat-value">{{ total_feedbacks }}</span>
+                <span>Total Feedbacks</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="feedbacks-page">
+    <div class="feedbacks-grid">
+        {% if feedbacks %}
+            {% for feedback in feedbacks %}
+            <div class="feedback-card">
+                <div class="feedback-header">
+                    <a href="{% url 'article_detail' slug=feedback.article.slug %}" class="feedback-article">
+                        <i class="fas fa-book"></i> {{ feedback.article.title|truncatewords:6 }}
+                    </a>
+                    <span class="feedback-date">
+                        <i class="far fa-calendar"></i>
+                        {{ feedback.created_at|date:"M d, Y" }}
+                    </span>
+                </div>
+                
+                <div class="feedback-content">
+                    {{ feedback.feedback_text }}
+                </div>
+                
+                <div class="feedback-footer">
+                    <span class="feedback-badge {% if feedback.is_helpful %}helpful{% else %}not-helpful{% endif %}">
+                        <i class="fas fa-{% if feedback.is_helpful %}thumbs-up{% else %}thumbs-down{% endif %}"></i>
+                        {% if feedback.is_helpful %}Helpful{% else %}Needs Improvement{% endif %}
+                    </span>
+                    <a href="{% url 'article_detail' slug=feedback.article.slug %}" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-external-link-alt"></i> View Article
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="far fa-comment-dots"></i>
+                <h3>No Feedback Yet</h3>
+                <p>Start reading articles and share your feedback to see them here!</p>
+                <a href="{% url 'articles' %}" class="btn btn-primary" style="margin-top: 1rem;">
+                    <i class="fas fa-book-open"></i> Browse Articles
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
