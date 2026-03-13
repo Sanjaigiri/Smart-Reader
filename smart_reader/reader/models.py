@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
+from datetime import timedelta
 import random
 import string
 
@@ -102,7 +104,7 @@ class ArticleViewLog(models.Model):
 # ========== CATEGORY & TAGS ==========
 class Category(models.Model):
     name = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=50, default='fa-folder')  # FontAwesome icon
     color = models.CharField(max_length=7, default='#6366f1')  # Hex color
@@ -116,7 +118,7 @@ class Category(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=50)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
     
     def __str__(self):
         return self.name
@@ -131,7 +133,7 @@ class Article(models.Model):
     ]
     
     title = models.CharField(max_length=200)
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
     content = models.TextField()
     summary = models.TextField(max_length=500, blank=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='articles')
@@ -213,6 +215,7 @@ class ReadingProgress(models.Model):
         # Mark as completed if max reached 90% or user reached 100%
         if self.max_scroll_percentage >= 90 or new_percentage >= 100:
             self.is_completed = True
+            self.max_scroll_percentage = 100  # Always set to 100% when completed
         
         self.save()
 
@@ -354,8 +357,64 @@ class ReadingList(models.Model):
     description = models.TextField(blank=True)
     articles = models.ManyToManyField(Article, blank=True, related_name='in_lists')
     is_public = models.BooleanField(default=False)
+    access_pin = models.CharField(max_length=128, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
         return f"{self.name} by {self.user.username}"
+
+    def set_pin(self, raw_pin):
+        self.access_pin = make_password(raw_pin) if raw_pin else ''
+
+    def check_pin(self, raw_pin):
+        if not self.access_pin:
+            return False
+        return check_password(raw_pin, self.access_pin)
+
+    @property
+    def is_private(self):
+        return not self.is_public
+
+
+class ReadingListAccessAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reading_list_access_attempts')
+    reading_list = models.ForeignKey(ReadingList, on_delete=models.CASCADE, related_name='access_attempts')
+    failed_attempts = models.IntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    delete_failed_attempts = models.IntegerField(default=0)
+    delete_locked_until = models.DateTimeField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'reading_list']
+
+    def is_locked(self):
+        return bool(self.locked_until and self.locked_until > timezone.now())
+
+    def is_delete_locked(self):
+        return bool(self.delete_locked_until and self.delete_locked_until > timezone.now())
+
+    def register_failure(self):
+        self.failed_attempts += 1
+        if self.failed_attempts >= 3:
+            self.locked_until = timezone.now() + timedelta(hours=24)
+        self.save(update_fields=['failed_attempts', 'locked_until', 'updated_at'])
+
+    def register_success(self):
+        self.failed_attempts = 0
+        self.locked_until = None
+        self.last_success_at = timezone.now()
+        self.save(update_fields=['failed_attempts', 'locked_until', 'last_success_at', 'updated_at'])
+
+    def register_delete_failure(self):
+        self.delete_failed_attempts += 1
+        if self.delete_failed_attempts >= 3:
+            self.delete_locked_until = timezone.now() + timedelta(hours=24)
+        self.save(update_fields=['delete_failed_attempts', 'delete_locked_until', 'updated_at'])
+
+    def register_delete_success(self):
+        self.delete_failed_attempts = 0
+        self.delete_locked_until = None
+        self.save(update_fields=['delete_failed_attempts', 'delete_locked_until', 'updated_at'])
 

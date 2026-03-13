@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.db.models import Sum, Count, Avg, Q
 from django.core.paginator import Paginator
@@ -22,7 +23,7 @@ from deep_translator import GoogleTranslator
 from .models import (
     Article, ReadingProgress, Note, UserProfile, Category, Tag,
     Bookmark, Highlight, Rating, ReadingStreak, Achievement, 
-    UserAchievement, ReadingList, OTPVerification, SiteVisit, ArticleViewLog, Feedback
+    UserAchievement, ReadingList, ReadingListAccessAttempt, OTPVerification, SiteVisit, ArticleViewLog, Feedback
 )
 
 # Try to import reportlab for PDF generation
@@ -102,9 +103,9 @@ def home(request):
     # Show all categories on home page
     categories = Category.objects.all()
     
-    # Stats for homepage - Display as 100,000+ for impressive look
+    # Stats for homepage - Display as 200,000+ for the homepage stat card
     total_articles = Article.objects.filter(is_published=True, language=user_language).count()
-    display_articles = "100,000" if total_articles > 0 else "0"
+    display_articles = "200,000" if total_articles > 0 else "0"
     total_users = User.objects.count()
     total_reads = ReadingProgress.objects.filter(is_completed=True).count()
     
@@ -534,6 +535,104 @@ def verify_otp(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
 
 
+def send_password_reset_otp(request):
+    """Send OTP for forgot password flow."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+
+        if not validate_email_format(email):
+            return JsonResponse({'status': 'error', 'message': 'Enter a valid email address.'}, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'No account found with this email.'}, status=404)
+
+        if not user.is_active:
+            return JsonResponse({'status': 'error', 'message': 'This account is deactivated. Contact support.'}, status=403)
+
+        one_hour_ago = timezone.now() - timedelta(hours=1)
+        recent_otps = OTPVerification.objects.filter(email=email, created_at__gte=one_hour_ago).count()
+        if recent_otps >= 5:
+            return JsonResponse({'status': 'error', 'message': 'Too many reset attempts. Please try again after 1 hour.'}, status=429)
+
+        OTPVerification.objects.filter(email=email, is_verified=False).delete()
+
+        otp = OTPVerification.generate_otp()
+        OTPVerification.objects.create(
+            email=email,
+            otp=otp,
+            expires_at=timezone.now() + timedelta(minutes=10),
+            is_verified=False,
+            attempts=0
+        )
+
+        email_sent = send_otp_email(email, otp)
+        if not email_sent:
+            return JsonResponse({'status': 'error', 'message': 'Unable to send reset OTP right now.'}, status=500)
+
+        return JsonResponse({'status': 'success', 'message': f'Reset OTP sent to {email}.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def reset_password_with_otp(request):
+    """Reset password after verifying OTP."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        otp = data.get('otp', '').strip()
+        new_password = data.get('new_password', '')
+        confirm_password = data.get('confirm_password', '')
+
+        if not validate_email_format(email):
+            return JsonResponse({'status': 'error', 'message': 'Enter a valid email address.'}, status=400)
+        if len(otp) != 6 or not otp.isdigit():
+            return JsonResponse({'status': 'error', 'message': 'Enter the 6-digit OTP sent to your email.'}, status=400)
+        if len(new_password) < 8:
+            return JsonResponse({'status': 'error', 'message': 'Password must be at least 8 characters.'}, status=400)
+        if new_password != confirm_password:
+            return JsonResponse({'status': 'error', 'message': 'Passwords do not match.'}, status=400)
+
+        user = User.objects.filter(email=email).first()
+        if not user:
+            return JsonResponse({'status': 'error', 'message': 'No account found with this email.'}, status=404)
+
+        try:
+            otp_record = OTPVerification.objects.filter(email=email, otp=otp).latest('created_at')
+        except OTPVerification.DoesNotExist:
+            latest_otp = OTPVerification.objects.filter(email=email).order_by('-created_at').first()
+            if latest_otp and not latest_otp.is_expired():
+                latest_otp.increment_attempts()
+                if latest_otp.attempts >= 5:
+                    latest_otp.delete()
+                    return JsonResponse({'status': 'error', 'message': 'Too many wrong OTP attempts. Request a new OTP.'}, status=403)
+            return JsonResponse({'status': 'error', 'message': 'Incorrect OTP.'}, status=400)
+
+        if otp_record.is_expired():
+            otp_record.delete()
+            return JsonResponse({'status': 'error', 'message': 'OTP expired. Please request a new one.'}, status=400)
+
+        if otp_record.attempts >= 5:
+            otp_record.delete()
+            return JsonResponse({'status': 'error', 'message': 'Too many wrong OTP attempts. Request a new OTP.'}, status=403)
+
+        user.set_password(new_password)
+        user.save()
+        OTPVerification.objects.filter(email=email).delete()
+
+        return JsonResponse({'status': 'success', 'message': 'Password reset successful. You can now sign in with your new password.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
 def check_email(request):
     """Check if email is valid and available"""
     if request.method == 'POST':
@@ -812,6 +911,7 @@ def article_detail(request, slug):
     is_bookmarked = False
     user_rating = None
     user_notes = []
+    user_notes_count = 0
     user_highlights = []
     progress = None
     user_language = 'EN'
@@ -819,7 +919,9 @@ def article_detail(request, slug):
     if request.user.is_authenticated:
         is_bookmarked = Bookmark.objects.filter(user=request.user, article=article).exists()
         user_rating = Rating.objects.filter(user=request.user, article=article).first()
-        user_notes = Note.objects.filter(user=request.user, article=article)
+        user_notes_queryset = Note.objects.filter(user=request.user, article=article).order_by('-created_at')
+        user_notes_count = user_notes_queryset.count()
+        user_notes = user_notes_queryset[:3]
         user_highlights = Highlight.objects.filter(user=request.user, article=article)
         progress, _ = ReadingProgress.objects.get_or_create(
             user=request.user, article=article
@@ -865,6 +967,7 @@ def article_detail(request, slug):
         'is_bookmarked': is_bookmarked,
         'user_rating': user_rating,
         'user_notes': user_notes,
+        'user_notes_count': user_notes_count,
         'user_highlights': user_highlights,
         'progress': progress,
         'has_purchase_links': article.has_purchase_links(),
@@ -880,6 +983,7 @@ def read_article(request, id):
 
 
 # ============ READING PROGRESS ============
+@csrf_exempt  # Allow sendBeacon requests without CSRF token header
 @login_required
 def save_progress(request):
     if request.method == 'POST':
@@ -909,8 +1013,12 @@ def save_progress(request):
         was_just_completed = False
         if not progress.is_completed and (progress.max_scroll_percentage >= 90 or new_percentage >= 100):
             progress.is_completed = True
-            progress.completed_at = timezone.now()  # Mark completion time
+            progress.max_scroll_percentage = 100  # Ensure 100% is stored when completed
             was_just_completed = True
+        
+        # Also ensure any already-completed article shows 100%
+        if progress.is_completed and progress.max_scroll_percentage < 100:
+            progress.max_scroll_percentage = 100
         
         progress.save()
         
@@ -1024,21 +1132,41 @@ def my_notes(request):
 @login_required
 def toggle_bookmark(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        article_id = data.get('article_id')
-        
-        bookmark, created = Bookmark.objects.get_or_create(
-            user=request.user,
-            article_id=article_id
-        )
-        
-        if not created:
-            bookmark.delete()
-            return JsonResponse({'status': 'removed'})
-        
-        return JsonResponse({'status': 'added'})
+        try:
+            data = json.loads(request.body)
+            article_id = data.get('article_id')
+            
+            if not article_id:
+                return JsonResponse({'status': 'error', 'message': 'Article ID required'}, status=400)
+            
+            # Ensure article_id is an integer
+            try:
+                article_id = int(article_id)
+            except (ValueError, TypeError):
+                return JsonResponse({'status': 'error', 'message': 'Invalid article ID'}, status=400)
+            
+            # Check if article exists
+            try:
+                article = Article.objects.get(id=article_id)
+            except Article.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Article not found'}, status=404)
+            
+            bookmark, created = Bookmark.objects.get_or_create(
+                user=request.user,
+                article=article
+            )
+            
+            if not created:
+                bookmark.delete()
+                return JsonResponse({'status': 'removed'})
+            
+            return JsonResponse({'status': 'added'})
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
-    return JsonResponse({'status': 'error'}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'POST method required'}, status=400)
 
 
 @login_required
@@ -1116,6 +1244,7 @@ def rate_article(request):
 @login_required
 def dashboard(request):
     user = request.user
+    normalize_user_progress(user)
     
     # Reading Progress
     progress_list = ReadingProgress.objects.filter(user=user)
@@ -1280,17 +1409,30 @@ def reading_lists(request):
     
     if request.method == 'POST':
         name = request.POST.get('name')
-        description = request.POST.get('description', '')
+        description = request.POST.get('description', '').strip()
         is_public = request.POST.get('is_public') == 'on'
+        pin = request.POST.get('private_pin', request.POST.get('access_pin', '')).strip()
         
         if name:
-            ReadingList.objects.create(
+            if not is_public:
+                is_valid_pin, pin_message = validate_reading_list_pin(pin)
+                if not is_valid_pin:
+                    messages.error(request, pin_message)
+                    return redirect('reading_lists')
+
+            reading_list = ReadingList(
                 user=request.user,
                 name=name,
                 description=description,
                 is_public=is_public
             )
+            if is_public:
+                reading_list.access_pin = ''
+            else:
+                reading_list.set_pin(pin)
+            reading_list.save()
             messages.success(request, 'Reading list created!')
+            return redirect('reading_lists')
     
     context = {
         'reading_lists': lists,
@@ -1313,6 +1455,76 @@ def add_to_list(request):
         return JsonResponse({'status': 'added'})
     
     return JsonResponse({'status': 'error'}, status=400)
+
+
+@login_required
+def access_reading_list(request, list_id):
+    """Unlock or fetch reading list contents."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+
+    reading_list = get_object_or_404(ReadingList, id=list_id, user=request.user)
+    articles = reading_list.articles.all().order_by('-created_at')
+
+    if reading_list.is_public:
+        return JsonResponse({
+            'status': 'success',
+            'description': reading_list.description or '',
+            'articles': [
+                {
+                    'title': article.title,
+                    'slug': article.slug,
+                    'category': article.category.name if article.category else 'Uncategorized',
+                    'read_time': article.estimated_read_time,
+                }
+                for article in articles
+            ]
+        })
+
+    attempt, _ = ReadingListAccessAttempt.objects.get_or_create(
+        user=request.user,
+        reading_list=reading_list
+    )
+
+    if attempt.is_locked():
+        return JsonResponse({
+            'status': 'locked',
+            'message': 'This private list is locked. Please try again after 24 hours.'
+        }, status=403)
+
+    pin = json.loads(request.body).get('pin', '').strip()
+    is_valid_pin, pin_message = validate_reading_list_pin(pin)
+    if not is_valid_pin:
+        return JsonResponse({'status': 'error', 'message': pin_message}, status=400)
+
+    if not reading_list.check_pin(pin):
+        attempt.register_failure()
+        if attempt.is_locked():
+            return JsonResponse({
+                'status': 'locked',
+                'message': 'Wrong PIN entered 3 times. Please try again after 24 hours.'
+            }, status=403)
+
+        remaining_attempts = max(0, 3 - attempt.failed_attempts)
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Incorrect PIN. {remaining_attempts} attempt(s) left.'
+        }, status=403)
+
+    attempt.register_success()
+    return JsonResponse({
+        'status': 'success',
+        'description': reading_list.description or '',
+        'articles': [
+            {
+                'title': article.title,
+                'slug': article.slug,
+                'category': article.category.name if article.category else 'Uncategorized',
+                'read_time': article.estimated_read_time,
+            }
+            for article in articles
+        ]
+    })
 
 
 # ============ SEARCH ============
@@ -1411,10 +1623,37 @@ def check_achievements(user):
             UserAchievement.objects.create(user=user, achievement=achievement)
 
 
+def normalize_user_progress(user):
+    """
+    Normalize older progress rows so completed articles always stay at 100%.
+    """
+    ReadingProgress.objects.filter(
+        user=user,
+        is_completed=False,
+        max_scroll_percentage__gte=90
+    ).update(is_completed=True, max_scroll_percentage=100)
+
+    ReadingProgress.objects.filter(
+        user=user,
+        is_completed=True,
+        max_scroll_percentage__lt=100
+    ).update(max_scroll_percentage=100)
+
+
+def validate_reading_list_pin(pin):
+    """Private reading lists use a 4-digit numeric PIN."""
+    if not pin:
+        return False, 'PIN is required for private reading lists.'
+    if not pin.isdigit() or len(pin) != 4:
+        return False, 'PIN must be exactly 4 digits.'
+    return True, ''
+
+
 # ============ API ENDPOINTS ============
 @login_required
 def get_user_stats(request):
     """API endpoint for user statistics"""
+    normalize_user_progress(request.user)
     progress = ReadingProgress.objects.filter(user=request.user)
     
     stats = {
@@ -1433,6 +1672,7 @@ def get_user_stats(request):
 @login_required
 def my_progress(request):
     """View for tracking reading progress"""
+    normalize_user_progress(request.user)
     progress_list = ReadingProgress.objects.filter(user=request.user).select_related('article', 'article__category')
     
     # Separate completed and in-progress
@@ -1494,13 +1734,28 @@ def my_streaks(request):
         if streak.current_streak in [7, 30, 100, 365]:
             send_streak_milestone_email(request.user, streak.current_streak)
     
-    # Get reading history for calendar view
-    progress = ReadingProgress.objects.filter(user=request.user)
-    reading_days = progress.values('last_read_at__date').distinct()
-    reading_dates = [r['last_read_at__date'].isoformat() for r in reading_days if r['last_read_at__date']]
+    # Build reading history for calendar view.
+    # `last_read_at` gets overwritten on the same progress row, so it cannot
+    # represent all past active days by itself.
+    reading_dates_set = set(
+        ArticleViewLog.objects.filter(user=request.user)
+        .values_list('viewed_at__date', flat=True)
+        .distinct()
+    )
+
+    # Fall back to progress timestamps for any rows without view logs.
+    progress_dates = ReadingProgress.objects.filter(user=request.user).values_list('last_read_at__date', flat=True)
+    reading_dates_set.update(day for day in progress_dates if day)
+
+    # Backfill consecutive days from the current streak so the week calendar
+    # stays consistent with the shown streak count.
+    if streak.last_read_date and streak.current_streak > 0:
+        for offset in range(streak.current_streak):
+            reading_dates_set.add(streak.last_read_date - timedelta(days=offset))
+
+    reading_dates = sorted(day.isoformat() for day in reading_dates_set if day)
     
     # Build weekly calendar data (Monday to Sunday)
-    from datetime import timedelta
     # Get the start of the current week (Monday)
     days_since_monday = today.weekday()  # Monday = 0, Sunday = 6
     week_start = today - timedelta(days=days_since_monday)
@@ -1580,7 +1835,35 @@ def my_achievements(request):
 @login_required
 def download_article_pdf(request, article_id):
     """Download article as PDF"""
+    import re
+    from html import unescape
+    
+    def strip_html_for_pdf(html_content):
+        """Strip HTML tags and convert to plain text for PDF generation"""
+        if not html_content:
+            return ''
+        
+        # Replace <br>, <br/>, <br /> with newlines
+        text = re.sub(r'<br\s*/?>', '\n', html_content, flags=re.IGNORECASE)
+        
+        # Replace </p> with double newlines for paragraph breaks
+        text = re.sub(r'</p>', '\n\n', text, flags=re.IGNORECASE)
+        
+        # Remove all other HTML tags
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Unescape HTML entities
+        text = unescape(text)
+        
+        # Clean up multiple newlines
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        
+        return text.strip()
+    
     article = get_object_or_404(Article, id=article_id)
+    
+    # Strip HTML from content for PDF
+    clean_content = strip_html_for_pdf(article.content)
     
     if not REPORTLAB_AVAILABLE:
         # Fallback to plain text if reportlab not installed
@@ -1591,7 +1874,7 @@ def download_article_pdf(request, article_id):
         response.write(f"Difficulty: {article.get_difficulty_display()}\n")
         response.write(f"Reading Time: {article.estimated_read_time} minutes\n\n")
         response.write("=" * 50 + "\n\n")
-        response.write(article.content)
+        response.write(clean_content)
         return response
     
     # Create PDF with reportlab
@@ -1614,12 +1897,19 @@ def download_article_pdf(request, article_id):
     story.append(Paragraph(meta_text, styles['Normal']))
     story.append(Spacer(1, 24))
     
-    # Add content paragraphs
-    content_paragraphs = article.content.split('\n\n')
+    # Add content paragraphs - use cleaned content
+    content_paragraphs = clean_content.split('\n\n')
     for para in content_paragraphs:
         if para.strip():
-            story.append(Paragraph(para.strip(), styles['Normal']))
-            story.append(Spacer(1, 12))
+            # Escape any remaining special XML characters for ReportLab
+            safe_para = para.strip().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            try:
+                story.append(Paragraph(safe_para, styles['Normal']))
+                story.append(Spacer(1, 12))
+            except Exception as e:
+                # If paragraph still fails, add as plain text
+                story.append(Paragraph(safe_para.encode('ascii', 'ignore').decode('ascii'), styles['Normal']))
+                story.append(Spacer(1, 12))
     
     doc.build(story)
     
@@ -1737,7 +2027,50 @@ def remove_from_list(request, list_id, article_id):
 @login_required
 def delete_reading_list(request, list_id):
     """Delete a reading list"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+
     reading_list = get_object_or_404(ReadingList, id=list_id, user=request.user)
+    data = {}
+    if request.headers.get('Content-Type', '').startswith('application/json'):
+        try:
+            data = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            data = {}
+
+    if reading_list.is_private:
+        attempt, _ = ReadingListAccessAttempt.objects.get_or_create(
+            user=request.user,
+            reading_list=reading_list
+        )
+
+        if attempt.is_delete_locked():
+            return JsonResponse({
+                'status': 'locked',
+                'message': 'Wrong PIN entered 3 times. Please try again after 24 hours.'
+            }, status=403)
+
+        pin = str(data.get('pin', '')).strip()
+        is_valid_pin, pin_message = validate_reading_list_pin(pin)
+        if not is_valid_pin:
+            return JsonResponse({'status': 'error', 'message': pin_message}, status=400)
+
+        if not reading_list.check_pin(pin):
+            attempt.register_delete_failure()
+            if attempt.is_delete_locked():
+                return JsonResponse({
+                    'status': 'locked',
+                    'message': 'Wrong PIN entered 3 times. Please try again after 24 hours.'
+                }, status=403)
+
+            remaining_attempts = max(0, 3 - attempt.delete_failed_attempts)
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Incorrect PIN. {remaining_attempts} attempt(s) left.'
+            }, status=403)
+
+        attempt.register_delete_success()
+
     name = reading_list.name
     reading_list.delete()
     
@@ -1760,13 +2093,96 @@ def edit_reading_list(request, list_id):
             name = data.get('name', '').strip()
             description = data.get('description', '').strip()
             is_public = data.get('is_public', False)
+            new_pin = str(data.get('private_pin', data.get('access_pin', ''))).strip()
+            current_pin = str(data.get('current_pin', '')).strip()
+            verify_only = bool(data.get('verify_only', False))
             
+            if verify_only:
+                if reading_list.is_public:
+                    return JsonResponse({'status': 'success', 'message': 'Public list does not need a PIN.'})
+
+                attempt, _ = ReadingListAccessAttempt.objects.get_or_create(
+                    user=request.user,
+                    reading_list=reading_list
+                )
+
+                if attempt.is_locked():
+                    return JsonResponse({
+                        'status': 'locked',
+                        'message': 'Wrong PIN entered 3 times. Please try again after 24 hours.'
+                    }, status=403)
+
+                is_valid_pin, pin_message = validate_reading_list_pin(current_pin)
+                if not is_valid_pin:
+                    return JsonResponse({'status': 'error', 'message': pin_message}, status=400)
+
+                if not reading_list.check_pin(current_pin):
+                    attempt.register_failure()
+                    if attempt.is_locked():
+                        return JsonResponse({
+                            'status': 'locked',
+                            'message': 'Wrong PIN entered 3 times. Please try again after 24 hours.'
+                        }, status=403)
+
+                    remaining_attempts = max(0, 3 - attempt.failed_attempts)
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Incorrect PIN. {remaining_attempts} attempt(s) left.'
+                    }, status=403)
+
+                attempt.register_success()
+                return JsonResponse({'status': 'success', 'message': 'PIN verified.'})
+
             if not name:
                 return JsonResponse({'status': 'error', 'message': 'List name is required.'})
+
+            if reading_list.is_private:
+                attempt, _ = ReadingListAccessAttempt.objects.get_or_create(
+                    user=request.user,
+                    reading_list=reading_list
+                )
+
+                if attempt.is_locked():
+                    return JsonResponse({
+                        'status': 'locked',
+                        'message': 'Wrong PIN entered 3 times. Please try again after 24 hours.'
+                    }, status=403)
+
+                is_valid_pin, pin_message = validate_reading_list_pin(current_pin)
+                if not is_valid_pin:
+                    return JsonResponse({'status': 'error', 'message': pin_message}, status=400)
+
+                if not reading_list.check_pin(current_pin):
+                    attempt.register_failure()
+                    if attempt.is_locked():
+                        return JsonResponse({
+                            'status': 'locked',
+                            'message': 'Wrong PIN entered 3 times. Please try again after 24 hours.'
+                        }, status=403)
+
+                    remaining_attempts = max(0, 3 - attempt.failed_attempts)
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Incorrect PIN. {remaining_attempts} attempt(s) left.'
+                    }, status=403)
+
+                attempt.register_success()
+
+            if not is_public:
+                if new_pin:
+                    is_valid_pin, pin_message = validate_reading_list_pin(new_pin)
+                    if not is_valid_pin:
+                        return JsonResponse({'status': 'error', 'message': pin_message})
+                elif not reading_list.access_pin:
+                    return JsonResponse({'status': 'error', 'message': 'Private lists need a 4-digit PIN.'})
             
             reading_list.name = name
             reading_list.description = description
             reading_list.is_public = is_public
+            if is_public:
+                reading_list.access_pin = ''
+            elif new_pin:
+                reading_list.set_pin(new_pin)
             reading_list.save()
             
             return JsonResponse({'status': 'success', 'message': f'Reading list "{name}" has been updated.'})
@@ -1791,6 +2207,8 @@ def admin_dashboard(request):
         return redirect('dashboard')
     
     today = timezone.now().date()
+    week_start = today - timedelta(days=6)
+    registration_start = today - timedelta(days=29)
     
     # User Statistics
     total_users = User.objects.count()
@@ -1806,37 +2224,60 @@ def admin_dashboard(request):
     # Today's visits
     visits_today = SiteVisit.objects.filter(visit_date=today).count()
     
-    # Last 7 days visits for chart
-    visits_data = []
-    for i in range(7):
-        day = today - timedelta(days=6-i)
-        count = SiteVisit.objects.filter(visit_date=day).count()
-        visits_data.append({
+    # Aggregate last 7 days visits in one query instead of one query per day.
+    weekly_visit_counts = {
+        item['visit_date']: item['count']
+        for item in SiteVisit.objects
+        .filter(visit_date__gte=week_start, visit_date__lte=today)
+        .values('visit_date')
+        .annotate(count=Count('id'))
+    }
+    visits_data = [
+        {
             'date': day.strftime('%a'),
-            'count': count
-        })
-    
-    # Top Articles (by views)
-    top_articles = Article.objects.filter(is_published=True).order_by('-views_count')[:10]
+            'count': weekly_visit_counts.get(day, 0)
+        }
+        for day in (week_start + timedelta(days=i) for i in range(7))
+    ]
     
     # Recent Articles (for admin dashboard)
-    recent_articles = Article.objects.all().order_by('-created_at')[:5]
+    recent_articles = (
+        Article.objects
+        .select_related('category')
+        .only('id', 'title', 'slug', 'created_at', 'category__name', 'views', 'is_published')
+        .order_by('-created_at')[:5]
+    )
     
     # Recent Users (for admin dashboard)
-    recent_users = User.objects.all().order_by('-date_joined')[:5]
+    recent_users = User.objects.only('id', 'username', 'first_name', 'email', 'date_joined', 'is_active').order_by('-date_joined')[:5]
     
     # Recent Activity
-    recent_progress = ReadingProgress.objects.select_related('user', 'article').order_by('-last_read_at')[:10]
+    recent_progress = (
+        ReadingProgress.objects
+        .select_related('user', 'article')
+        .only(
+            'id', 'last_read_at',
+            'user__id', 'user__username', 'user__first_name',
+            'article__id', 'article__title'
+        )
+        .order_by('-last_read_at')[:10]
+    )
     
-    # User Registration Trend (last 30 days)
-    registration_data = []
-    for i in range(30):
-        day = today - timedelta(days=29-i)
-        count = User.objects.filter(date_joined__date=day).count()
-        registration_data.append({
+    # Aggregate last 30 days registrations in one query instead of one query per day.
+    registration_counts = {
+        item['date_joined__date']: item['count']
+        for item in User.objects
+        .filter(date_joined__date__gte=registration_start, date_joined__date__lte=today)
+        .values('date_joined__date')
+        .annotate(count=Count('id'))
+    }
+    registration_data = [
+        {
             'date': day.strftime('%d %b'),
-            'count': count
-        })
+            'count': registration_counts.get(day, 0)
+        }
+        for day in (registration_start + timedelta(days=i) for i in range(30))
+    ]
     
     context = {
         'total_users': total_users,
@@ -1848,7 +2289,6 @@ def admin_dashboard(request):
         'total_views': total_views,
         'visits_today': visits_today,
         'visits_data': json.dumps(visits_data),
-        'top_articles': top_articles,
         'recent_articles': recent_articles,
         'recent_users': recent_users,
         'recent_progress': recent_progress,
@@ -1863,12 +2303,13 @@ def admin_users(request):
     """Admin view for managing users"""
     all_users = User.objects.all()
     users = all_users.order_by('-date_joined')
+    admin_query = Q(is_staff=True) | Q(is_superuser=True) | Q(email__in=ADMIN_EMAILS)
     
     # Stats for the page
     total_users = all_users.count()
     active_users = all_users.filter(is_active=True).count()
     inactive_users = all_users.filter(is_active=False).count()
-    admin_users_count = all_users.filter(Q(is_staff=True) | Q(is_superuser=True)).count()
+    admin_users_count = all_users.filter(admin_query).distinct().count()
     
     # Search
     search = request.GET.get('search', '')
@@ -1883,13 +2324,13 @@ def admin_users(request):
     status = request.GET.get('status', '')
     if status == 'active':
         # Active regular users only (not staff/admin)
-        users = users.filter(is_active=True, is_staff=False, is_superuser=False)
+        users = users.filter(is_active=True).exclude(admin_query)
     elif status == 'deactive':
         # Deactivated users only
         users = users.filter(is_active=False)
     elif status == 'staff':
         # Staff and admins only
-        users = users.filter(Q(is_staff=True) | Q(is_superuser=True))
+        users = users.filter(admin_query).distinct()
     
     # Pagination
     paginator = Paginator(users, 20)
@@ -1904,6 +2345,7 @@ def admin_users(request):
         'active_users': active_users,
         'inactive_users': inactive_users,
         'admin_users': admin_users_count,
+        'admin_emails': ADMIN_EMAILS,
     }
     return render(request, 'admin/users.html', context)
 

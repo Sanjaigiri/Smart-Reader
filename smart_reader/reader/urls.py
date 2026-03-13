@@ -13,6 +13,8 @@ urlpatterns = [
     path('send-otp/', views.send_otp, name='send_otp'),
     path('verify-otp/', views.verify_otp, name='verify_otp'),
     path('check-email/', views.check_email, name='check_email'),
+    path('forgot-password/send-otp/', views.send_password_reset_otp, name='send_password_reset_otp'),
+    path('forgot-password/reset/', views.reset_password_with_otp, name='reset_password_with_otp'),
     
     # Articles
     path('articles/', views.article_list, name='articles'),
@@ -60,6 +62,7 @@ urlpatterns = [
     # Reading Lists
     path('reading-lists/', views.reading_lists, name='reading_lists'),
     path('add-to-list/', views.add_to_list, name='add_to_list'),
+    path('reading-lists/<int:list_id>/access/', views.access_reading_list, name='access_reading_list'),
     path('remove-from-list/<int:list_id>/<int:article_id>/', views.remove_from_list, name='remove_from_list'),
     path('delete-list/<int:list_id>/', views.delete_reading_list, name='delete_reading_list'),
     path('edit-list/<int:list_id>/', views.edit_reading_list, name='edit_reading_list'),

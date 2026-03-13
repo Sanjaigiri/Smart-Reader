@@ -65,6 +65,10 @@
         transform: translateY(-4px);
         box-shadow: var(--shadow-xl);
     }
+
+    .list-card.private-list {
+        border-color: rgba(99, 102, 241, 0.25);
+    }
     
     .list-icon {
         width: 56px;
@@ -90,6 +94,31 @@
         font-size: 0.9375rem;
         margin-bottom: 1rem;
     }
+
+    .list-card-body {
+        position: relative;
+    }
+
+    .visibility-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    .visibility-badge.public {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+    }
+
+    .visibility-badge.private {
+        background: rgba(99, 102, 241, 0.12);
+        color: var(--primary);
+    }
     
     .list-meta {
         display: flex;
@@ -97,6 +126,68 @@
         justify-content: space-between;
         padding-top: 1rem;
         border-top: 1px solid var(--border);
+    }
+
+    .list-contents {
+        display: none;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .list-contents.active {
+        display: block;
+    }
+
+    .list-article {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .list-article:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .list-article a {
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .list-article a:hover {
+        color: var(--primary);
+    }
+
+    .list-article-meta {
+        color: var(--text-muted);
+        font-size: 0.8125rem;
+        white-space: nowrap;
+    }
+
+    .pin-field {
+        display: none;
+    }
+
+    .pin-field.active {
+        display: block;
+    }
+
+    .pin-help {
+        margin-top: 0.4rem;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+    }
+
+    .pin-input {
+        letter-spacing: 0.3rem;
+        text-align: center;
+        font-weight: 600;
+        -webkit-text-security: disc;
     }
     
     .list-count {
@@ -190,6 +281,12 @@
         gap: 12px;
         justify-content: flex-end;
     }
+
+    .access-modal-subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+    }
     
     @media (max-width: 1024px) {
         .lists-grid {
@@ -220,19 +317,24 @@
             </button>
         </div>
         
-        <form method="POST" class="create-form" id="createForm">
+        <form method="POST" class="create-form" id="createForm" autocomplete="off">
             {% csrf_token %}
             <div class="form-group">
                 <label class="form-label">List Name</label>
-                <input type="text" name="name" class="form-control" placeholder="e.g., Machine Learning" required>
+                <input type="text" name="name" class="form-control" placeholder="e.g., Machine Learning" required autocomplete="off">
             </div>
-            <div class="form-group">
+            <div class="form-group description-field" id="createDescriptionField">
                 <label class="form-label">Description (optional)</label>
-                <textarea name="description" class="form-control" placeholder="What's this list about?"></textarea>
+                <textarea name="description" id="createDescription" class="form-control" placeholder="What's this list about?" autocomplete="off"></textarea>
             </div>
             <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
                 <input type="checkbox" name="is_public" id="isPublic">
                 <label for="isPublic">Make this list public</label>
+            </div>
+            <div class="form-group pin-field" id="createPinField">
+                <label class="form-label">Private PIN</label>
+                <input type="text" name="private_pin" id="createAccessPin" class="form-control pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4-digit PIN" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" spellcheck="false">
+                <div class="pin-help">Required only for private lists. Users get 3 wrong attempts before a 24-hour lock.</div>
             </div>
             <div style="display: flex; gap: 1rem;">
                 <button type="submit" class="btn btn-primary">Create List</button>
@@ -243,27 +345,24 @@
     
     <div class="lists-grid">
         {% for list in reading_lists %}
-        <div class="list-card" data-list-id="{{ list.id }}">
-            <div class="list-icon">
-                <i class="fas fa-layer-group"></i>
-            </div>
-            <h3 class="list-title">{{ list.name }}</h3>
-            <p class="list-description">{{ list.description|default:"No description" }}</p>
-            <div class="list-meta">
-                <span class="list-count">
-                    <i class="fas fa-book"></i> {{ list.articles.count }} articles
+        <div class="list-card {% if not list.is_public %}private-list{% endif %}" data-list-id="{{ list.id }}">
+            <div class="list-card-body">
+                <span class="visibility-badge {% if list.is_public %}public{% else %}private{% endif %}">
+                    {% if list.is_public %}Public{% else %}Private{% endif %}
                 </span>
-                {% if list.is_public %}
-                <span class="badge badge-success"><i class="fas fa-globe"></i> Public</span>
-                {% else %}
-                <span class="badge badge-secondary"><i class="fas fa-lock"></i> Private</span>
+                <div class="list-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <h3 class="list-title">{{ list.name }}</h3>
+                {% if list.is_public and list.description %}
+                <p class="list-description">{{ list.description }}</p>
                 {% endif %}
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                <button class="btn btn-sm btn-secondary" style="flex: 1; text-align: center;" onclick="showEditForm({{ list.id }}, '{{ list.name|escapejs }}', '{{ list.description|escapejs }}', {{ list.is_public|yesno:'true,false' }})">
+                <button class="btn btn-sm btn-secondary" style="flex: 1; text-align: center;" onclick="openEditFlow({{ list.id }}, '{{ list.name|escapejs }}', '{{ list.description|escapejs }}', {{ list.is_public|yesno:'true,false' }})">
                     <i class="fas fa-edit"></i> Edit
                 </button>
-                <button class="btn btn-sm btn-danger" style="flex: 1;" onclick="deleteReadingList({{ list.id }}, '{{ list.name }}')">
+                <button class="btn btn-sm btn-danger" style="flex: 1;" onclick="deleteReadingList({{ list.id }}, '{{ list.name|escapejs }}', {{ list.is_public|yesno:'false,true' }})">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -284,19 +383,24 @@
             <button type="button" class="edit-modal-close" onclick="hideEditForm()">&times;</button>
         </div>
         <div class="edit-modal-body">
-            <form id="editForm">
+            <form id="editForm" autocomplete="off">
                 <input type="hidden" id="editListId" name="list_id">
                 <div class="form-group">
                     <label class="form-label">List Name</label>
-                    <input type="text" id="editName" name="name" class="form-control" placeholder="e.g., Machine Learning" required>
+                    <input type="text" id="editName" name="name" class="form-control" placeholder="e.g., Machine Learning" required autocomplete="off">
                 </div>
-                <div class="form-group">
+                <div class="form-group description-field" id="editDescriptionField">
                     <label class="form-label">Description (optional)</label>
-                    <textarea id="editDescription" name="description" class="form-control" placeholder="What's this list about?"></textarea>
+                    <textarea id="editDescription" name="description" class="form-control" placeholder="What's this list about?" autocomplete="off"></textarea>
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="editIsPublic" name="is_public">
                     <label for="editIsPublic">Make this list public</label>
+                </div>
+                <div class="form-group pin-field" id="editPinField">
+                    <label class="form-label">Private PIN</label>
+                    <input type="text" id="editAccessPin" name="private_pin" class="form-control pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="Enter new 4-digit PIN" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" spellcheck="false">
+                    <div class="pin-help">Leave blank to keep the current PIN. Required if converting an old private list with no PIN.</div>
                 </div>
             </form>
         </div>
@@ -310,13 +414,93 @@
         </div>
     </div>
 </div>
+
+<div id="editPinModal" class="edit-modal-overlay" style="display: none;">
+    <div class="edit-modal">
+        <div class="edit-modal-header">
+            <h3><i class="fas fa-lock"></i> Verify Private List</h3>
+            <button type="button" class="edit-modal-close" onclick="hideEditPinModal()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <input type="hidden" id="editPinListId">
+            <input type="hidden" id="editPinIsPublic">
+            <input type="hidden" id="editPinListName">
+            <input type="hidden" id="editPinListDescription">
+            <p class="access-modal-subtitle" id="editPinSubtitle">Enter the private PIN to edit this list.</p>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">PIN</label>
+                <input type="text" id="editPinInput" class="form-control pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4-digit PIN" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" spellcheck="false">
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideEditPinModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="submitEditPin()">Continue</button>
+        </div>
+    </div>
+</div>
+
+<div id="accessModal" class="edit-modal-overlay" style="display: none;">
+    <div class="edit-modal">
+        <div class="edit-modal-header">
+            <h3><i class="fas fa-lock"></i> Unlock Private List</h3>
+            <button type="button" class="edit-modal-close" onclick="hideAccessModal()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <input type="hidden" id="accessListId">
+            <p class="access-modal-subtitle" id="accessModalSubtitle">Enter the 4-digit PIN to view this list.</p>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">PIN</label>
+                <input type="text" id="accessPinInput" class="form-control pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4-digit PIN" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" spellcheck="false">
+                <div class="pin-help">3 wrong attempts will lock this list for 24 hours.</div>
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideAccessModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" class="btn btn-primary" onclick="submitPrivateListAccess()">
+                <i class="fas fa-unlock"></i> Open List
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="deletePinModal" class="edit-modal-overlay" style="display: none;">
+    <div class="edit-modal">
+        <div class="edit-modal-header">
+            <h3><i class="fas fa-trash-alt"></i> Delete Private List</h3>
+            <button type="button" class="edit-modal-close" onclick="hideDeletePinModal()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <input type="hidden" id="deleteListId">
+            <p class="access-modal-subtitle" id="deleteModalSubtitle">Enter the private PIN to delete this list.</p>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">PIN</label>
+                <input type="text" id="deletePinInput" class="form-control pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4-digit PIN" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" spellcheck="false">
+                <div class="pin-help">3 wrong attempts will block deletion for 24 hours.</div>
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideDeletePinModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" class="btn btn-danger" onclick="submitDeleteWithPin()">
+                <i class="fas fa-trash"></i> Delete List
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+const unlockedLists = new Set();
+const verifiedEditPins = new Map();
+
 function showCreateForm() {
     document.getElementById('createBtn').style.display = 'none';
     document.getElementById('createForm').classList.add('active');
+    updatePrivacyFields('isPublic', 'createPinField', 'createAccessPin');
 }
 
 function hideCreateForm() {
@@ -324,51 +508,144 @@ function hideCreateForm() {
     document.getElementById('createForm').classList.remove('active');
 }
 
-function deleteReadingList(listId, listName) {
+function deleteReadingList(listId, listName, isPrivate = false) {
+    if (isPrivate) {
+        openDeletePinModal(listId, listName);
+        return;
+    }
+
     smartConfirm(`Are you sure you want to delete "<strong>${listName}</strong>"?<br><small style="color:#94a3b8;">This action cannot be undone.</small>`, {
         title: 'Delete Reading List',
         confirmText: 'Delete',
         danger: true
     }).then(confirmed => {
         if (!confirmed) return;
-    
-        // Send AJAX request
-        fetch(`/delete-list/${listId}/`, {
+
+        performDeleteRequest(listId, listName);
+    });
+}
+
+function performDeleteRequest(listId, listName, pin = '') {
+    fetch(`/delete-list/${listId}/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
             'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        body: JSON.stringify(pin ? { pin } : {})
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Remove the card from the page
-            const card = document.querySelector(`[data-list-id="${listId}"]`);
-            if (card) {
-                card.style.animation = 'fadeOut 0.3s ease forwards';
-                setTimeout(() => {
-                    card.remove();
-                    smartAlert(data.message, 'success');
-                    // Check if no lists left
-                    if (document.querySelectorAll('.list-card').length === 0) {
-                        setTimeout(() => location.reload(), 1500);
-                    }
-                }, 300);
-            } else {
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            smartAlert(data.message || 'Error deleting reading list', 'error');
+            return;
+        }
+
+        const card = document.querySelector(`[data-list-id="${listId}"]`);
+        if (card) {
+            card.style.animation = 'fadeOut 0.3s ease forwards';
+            setTimeout(() => {
+                card.remove();
                 smartAlert(data.message, 'success');
-                setTimeout(() => location.reload(), 1500);
-            }
+                if (document.querySelectorAll('.list-card').length === 0) {
+                    setTimeout(() => location.reload(), 1500);
+                }
+            }, 300);
         } else {
-            smartAlert(data.message || 'Error deleting list', 'error');
+            smartAlert(data.message, 'success');
+            setTimeout(() => location.reload(), 1500);
         }
     })
     .catch(error => {
         console.error('Error:', error);
         smartAlert('Error deleting reading list', 'error');
     });
-    });
+}
+
+function openDeletePinModal(listId, listName) {
+    document.getElementById('deleteListId').value = listId;
+    document.getElementById('deletePinInput').value = '';
+    document.getElementById('deleteModalSubtitle').textContent = `Enter the private PIN to delete "${listName}".`;
+    document.getElementById('deletePinModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('deletePinInput').focus(), 50);
+}
+
+function hideDeletePinModal() {
+    document.getElementById('deletePinModal').style.display = 'none';
+}
+
+function submitDeleteWithPin() {
+    const listId = document.getElementById('deleteListId').value;
+    const pin = document.getElementById('deletePinInput').value.trim();
+    const card = document.querySelector(`[data-list-id="${listId}"]`);
+    const listName = card?.querySelector('.list-title')?.textContent || 'this list';
+
+    if (!/^\d{4}$/.test(pin)) {
+        smartAlert('Enter a valid 4-digit PIN.', 'error');
+        return;
+    }
+
+    performDeleteRequest(listId, listName, pin);
+    hideDeletePinModal();
+}
+
+function openEditFlow(listId, name, description, isPublic) {
+    if (isPublic) {
+        showEditForm(listId, name, description, isPublic);
+        return;
+    }
+
+    document.getElementById('editPinListId').value = listId;
+    document.getElementById('editPinIsPublic').value = isPublic ? 'true' : 'false';
+    document.getElementById('editPinListName').value = name;
+    document.getElementById('editPinListDescription').value = description || '';
+    document.getElementById('editPinInput').value = '';
+    document.getElementById('editPinSubtitle').textContent = `Enter the private PIN to edit "${name}".`;
+    document.getElementById('editPinModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('editPinInput').focus(), 50);
+}
+
+function hideEditPinModal() {
+    document.getElementById('editPinModal').style.display = 'none';
+}
+
+function submitEditPin() {
+    const listId = document.getElementById('editPinListId').value;
+    const pin = document.getElementById('editPinInput').value.trim();
+    const name = document.getElementById('editPinListName').value;
+    const description = document.getElementById('editPinListDescription').value;
+    const isPublic = document.getElementById('editPinIsPublic').value === 'true';
+
+    if (!/^\d{4}$/.test(pin)) {
+        smartAlert('Enter a valid 4-digit PIN.', 'error');
+        return;
+    }
+
+    fetch(`/edit-list/${listId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            verify_only: true,
+            current_pin: pin
+        })
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            smartAlert(data.message || 'Unable to verify PIN.', 'error');
+            return;
+        }
+
+        verifiedEditPins.set(String(listId), pin);
+        hideEditPinModal();
+        showEditForm(listId, name, description, isPublic);
+    })
+    .catch(() => smartAlert('Unable to verify PIN right now.', 'error'));
 }
 
 function showEditForm(listId, name, description, isPublic) {
@@ -376,6 +653,8 @@ function showEditForm(listId, name, description, isPublic) {
     document.getElementById('editName').value = name;
     document.getElementById('editDescription').value = description || '';
     document.getElementById('editIsPublic').checked = isPublic;
+    document.getElementById('editAccessPin').value = '';
+    updatePrivacyFields('editIsPublic', 'editPinField', 'editAccessPin');
     document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -388,9 +667,16 @@ function saveEdit() {
     const name = document.getElementById('editName').value.trim();
     const description = document.getElementById('editDescription').value.trim();
     const isPublic = document.getElementById('editIsPublic').checked;
+    const accessPin = document.getElementById('editAccessPin').value.trim();
+    const currentPin = verifiedEditPins.get(String(listId)) || '';
     
     if (!name) {
         smartAlert('Please enter a list name', 'error');
+        return;
+    }
+
+    if (!isPublic && accessPin && (!/^\d{4}$/.test(accessPin))) {
+        smartAlert('PIN must be exactly 4 digits', 'error');
         return;
     }
     
@@ -404,7 +690,9 @@ function saveEdit() {
         body: JSON.stringify({
             name: name,
             description: description,
-            is_public: isPublic
+            is_public: isPublic,
+            access_pin: accessPin,
+            current_pin: currentPin
         })
     })
     .then(response => response.json())
@@ -416,16 +704,37 @@ function saveEdit() {
             const card = document.querySelector(`[data-list-id="${listId}"]`);
             if (card) {
                 card.querySelector('.list-title').textContent = name;
-                card.querySelector('.list-description').textContent = description || 'No description';
-                const badge = card.querySelector('.list-meta .badge');
-                if (isPublic) {
-                    badge.className = 'badge badge-success';
-                    badge.innerHTML = '<i class="fas fa-globe"></i> Public';
-                } else {
-                    badge.className = 'badge badge-secondary';
-                    badge.innerHTML = '<i class="fas fa-lock"></i> Private';
+                card.classList.toggle('private-list', !isPublic);
+                const badge = card.querySelector('.visibility-badge');
+                if (badge) {
+                    badge.className = `visibility-badge ${isPublic ? 'public' : 'private'}`;
+                    badge.textContent = isPublic ? 'Public' : 'Private';
+                }
+                const existingDescription = card.querySelector('.list-description');
+                if (isPublic && description) {
+                    if (existingDescription) {
+                        existingDescription.textContent = description;
+                    } else {
+                        const descriptionNode = document.createElement('p');
+                        descriptionNode.className = 'list-description';
+                        descriptionNode.textContent = description;
+                        card.querySelector('.list-title').insertAdjacentElement('afterend', descriptionNode);
+                    }
+                } else if (existingDescription) {
+                    existingDescription.remove();
+                }
+
+                const deleteButton = card.querySelector('.btn-danger');
+                if (deleteButton) {
+                    deleteButton.setAttribute('onclick', `deleteReadingList(${listId}, ${JSON.stringify(name)}, ${!isPublic})`);
+                }
+
+                const editButton = card.querySelector('.btn-secondary');
+                if (editButton) {
+                    editButton.setAttribute('onclick', `openEditFlow(${listId}, ${JSON.stringify(name)}, ${JSON.stringify(description)}, ${isPublic})`);
                 }
             }
+            verifiedEditPins.delete(String(listId));
         } else {
             smartAlert(data.message || 'Error updating list', 'error');
         }
@@ -443,12 +752,145 @@ document.getElementById('editModal').addEventListener('click', function(e) {
     }
 });
 
+document.getElementById('editPinModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideEditPinModal();
+    }
+});
+
 // Close modal on Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && document.getElementById('editModal').style.display === 'flex') {
         hideEditForm();
     }
+    if (e.key === 'Escape' && document.getElementById('editPinModal').style.display === 'flex') {
+        hideEditPinModal();
+    }
 });
+
+function updatePrivacyFields(toggleId, fieldId, inputId) {
+    const isPublic = document.getElementById(toggleId).checked;
+    const field = document.getElementById(fieldId);
+    const input = document.getElementById(inputId);
+
+    if (isPublic) {
+        field.classList.remove('active');
+        if (input) input.value = '';
+    } else {
+        field.classList.add('active');
+    }
+}
+
+function renderListArticles(listId, description, articles) {
+    const container = document.getElementById(`listContents${listId}`);
+    if (!container) return;
+
+    const descriptionHtml = description
+        ? `<p class="list-description" style="margin-bottom:${articles.length ? '1rem' : '0'};">${escapeHtml(description)}</p>`
+        : '';
+    const articlesHtml = articles.length ? articles.map(article => `
+        <div class="list-article">
+            <div>
+                <a href="/article/${article.slug}/">${article.title}</a>
+                <div class="list-article-meta">${article.category}</div>
+            </div>
+            <div class="list-article-meta">${article.read_time} min</div>
+        </div>
+    `).join('') : '';
+    const emptyHtml = !description && !articles.length
+        ? '<p style="color: var(--text-muted); margin: 0;">No details available for this list.</p>'
+        : '';
+
+    container.innerHTML = `${descriptionHtml}${articlesHtml}${emptyHtml}`;
+    container.classList.add('active');
+}
+
+function toggleListContents(listId, isPrivate, listName = 'Reading List') {
+    const container = document.getElementById(`listContents${listId}`);
+    if (!container) return;
+
+    if (container.classList.contains('active')) {
+        container.classList.remove('active');
+        return;
+    }
+
+    if (isPrivate && !unlockedLists.has(listId)) {
+        openAccessModal(listId, listName);
+        return;
+    }
+
+    fetch(`/reading-lists/${listId}/access/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok && data.status !== 'success') {
+            smartAlert(data.message || 'Unable to open this list.', 'error');
+            return;
+        }
+        renderListArticles(listId, data.description || '', data.articles || []);
+    })
+    .catch(() => smartAlert('Unable to load reading list contents.', 'error'));
+}
+
+function openAccessModal(listId, listName) {
+    document.getElementById('accessListId').value = listId;
+    document.getElementById('accessPinInput').value = '';
+    document.getElementById('accessModalSubtitle').textContent = `Enter the 4-digit PIN to open "${listName}".`;
+    document.getElementById('accessModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('accessPinInput').focus(), 50);
+}
+
+function hideAccessModal() {
+    document.getElementById('accessModal').style.display = 'none';
+}
+
+function submitPrivateListAccess() {
+    const listId = document.getElementById('accessListId').value;
+    const pin = document.getElementById('accessPinInput').value.trim();
+
+    if (!/^\d{4}$/.test(pin)) {
+        smartAlert('Enter a valid 4-digit PIN.', 'error');
+        return;
+    }
+
+    fetch(`/reading-lists/${listId}/access/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ pin })
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok) {
+            smartAlert(data.message || 'Unable to unlock this list.', 'error');
+            return;
+        }
+
+        unlockedLists.add(Number(listId));
+        renderListArticles(listId, data.description || '', data.articles || []);
+        hideAccessModal();
+    })
+    .catch(() => smartAlert('Unable to verify PIN right now.', 'error'));
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 function getCookie(name) {
     let cookieValue = null;
@@ -464,5 +906,49 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+document.getElementById('isPublic').addEventListener('change', () => updatePrivacyFields('isPublic', 'createPinField', 'createAccessPin'));
+document.getElementById('editIsPublic').addEventListener('change', () => updatePrivacyFields('editIsPublic', 'editPinField', 'editAccessPin'));
+
+['createAccessPin', 'editAccessPin', 'accessPinInput', 'deletePinInput', 'editPinInput'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '').slice(0, 4);
+    });
+});
+
+document.getElementById('accessModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideAccessModal();
+    }
+});
+
+document.getElementById('accessPinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        submitPrivateListAccess();
+    }
+});
+
+document.getElementById('deletePinModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideDeletePinModal();
+    }
+});
+
+document.getElementById('deletePinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        submitDeleteWithPin();
+    }
+});
+
+document.getElementById('editPinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        submitEditPin();
+    }
+});
 </script>
 {% endblock %}
