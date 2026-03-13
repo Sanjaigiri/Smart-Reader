@@ -239,6 +239,75 @@
         color: var(--success);
         font-size: 0.875rem;
     }
+
+    .reset-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+    }
+
+    .reset-modal.active {
+        display: flex;
+    }
+
+    .reset-modal-card {
+        width: 100%;
+        max-width: 460px;
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xl);
+        overflow: hidden;
+    }
+
+    .reset-modal-header {
+        padding: 1.5rem 1.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .reset-modal-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .reset-close {
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 1.25rem;
+        cursor: pointer;
+    }
+
+    .reset-modal-body {
+        padding: 1.5rem 1.75rem 1.75rem;
+    }
+
+    .reset-step {
+        display: none;
+    }
+
+    .reset-step.active {
+        display: block;
+    }
+
+    .reset-help {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .reset-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
 </style>
 {% endblock %}
 
@@ -295,7 +364,7 @@
                         <input type="checkbox" name="remember">
                         <span>Remember me</span>
                     </label>
-                    <a href="#" class="forgot-link">Forgot password?</a>
+                    <a href="#" class="forgot-link" onclick="event.preventDefault(); openResetModal();">Forgot password?</a>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-submit">
@@ -307,6 +376,52 @@
                 Don't have an account? <a href="{% url 'register' %}">Sign Up Free</a>
                 <br><br>
                 <small>Are you an admin? <a href="{% url 'admin_login' %}">Admin Login</a></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="reset-modal" id="resetModal">
+    <div class="reset-modal-card">
+        <div class="reset-modal-header">
+            <h3>Forgot Password</h3>
+            <button type="button" class="reset-close" onclick="closeResetModal()">&times;</button>
+        </div>
+        <div class="reset-modal-body">
+            <div class="reset-step active" id="resetStepEmail">
+                <p class="reset-help">Enter your email. We will send a 6-digit OTP so you can create a new password.</p>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="resetEmail" class="form-control" placeholder="Enter your registered email">
+                </div>
+                <div class="reset-actions">
+                    <button type="button" class="btn btn-primary" onclick="sendResetOtp()">
+                        <i class="fas fa-paper-plane"></i> Send OTP
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeResetModal()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="reset-step" id="resetStepPassword">
+                <p class="reset-help">Check your email, enter the OTP, then set your new password.</p>
+                <div class="form-group">
+                    <label class="form-label">OTP</label>
+                    <input type="text" id="resetOtp" class="form-control" maxlength="6" inputmode="numeric" placeholder="6-digit OTP">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" id="resetNewPassword" class="form-control" placeholder="Enter new password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" id="resetConfirmPassword" class="form-control" placeholder="Confirm new password">
+                </div>
+                <div class="reset-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitPasswordReset()">
+                        <i class="fas fa-key"></i> Reset Password
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="showResetStep('resetStepEmail')">Back</button>
+                </div>
             </div>
         </div>
     </div>
@@ -332,5 +447,87 @@
             icon.classList.add('fa-eye');
         }
     }
+
+    function openResetModal() {
+        document.getElementById('resetModal').classList.add('active');
+        showResetStep('resetStepEmail');
+        document.getElementById('resetEmail').focus();
+    }
+
+    function closeResetModal() {
+        document.getElementById('resetModal').classList.remove('active');
+    }
+
+    function showResetStep(stepId) {
+        document.querySelectorAll('.reset-step').forEach(step => step.classList.remove('active'));
+        document.getElementById(stepId).classList.add('active');
+    }
+
+    function sendResetOtp() {
+        const email = document.getElementById('resetEmail').value.trim();
+        if (!email) {
+            smartAlert('Enter your registered email.', 'error');
+            return;
+        }
+
+        fetch("{% url 'send_password_reset_otp' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ email })
+        })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                smartAlert(data.message || 'Unable to send OTP.', 'error');
+                return;
+            }
+
+            smartAlert(data.message, 'success');
+            showResetStep('resetStepPassword');
+            document.getElementById('resetOtp').focus();
+        })
+        .catch(() => smartAlert('Unable to send OTP right now.', 'error'));
+    }
+
+    function submitPasswordReset() {
+        const email = document.getElementById('resetEmail').value.trim();
+        const otp = document.getElementById('resetOtp').value.trim();
+        const newPassword = document.getElementById('resetNewPassword').value;
+        const confirmPassword = document.getElementById('resetConfirmPassword').value;
+
+        fetch("{% url 'reset_password_with_otp' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                email: email,
+                otp: otp,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            })
+        })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                smartAlert(data.message || 'Unable to reset password.', 'error');
+                return;
+            }
+
+            smartAlert(data.message, 'success');
+            closeResetModal();
+        })
+        .catch(() => smartAlert('Unable to reset password right now.', 'error'));
+    }
+
+    document.getElementById('resetModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeResetModal();
+        }
+    });
 </script>
 {% endblock %}

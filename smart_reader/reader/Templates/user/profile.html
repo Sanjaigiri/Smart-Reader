@@ -323,37 +323,6 @@
         color: white;
     }
     
-    /* Quick Links */
-    .quick-links {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        margin-top: 1rem;
-    }
-    
-    .quick-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        background: var(--bg-tertiary);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        text-decoration: none;
-        color: var(--text-primary);
-        font-size: 0.85rem;
-        transition: all 0.2s;
-    }
-    
-    .quick-link:hover {
-        border-color: var(--primary);
-        color: var(--primary);
-    }
-    
-    .quick-link i {
-        font-size: 0.9rem;
-    }
-    
     /* Responsive */
     @media (max-width: 640px) {
         .profile-header {
@@ -493,31 +462,6 @@
                         <input type="checkbox" name="dark_mode" {% if profile.dark_mode or profile.theme == 'dark' %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
-                </div>
-            </div>
-            
-            <!-- Quick Links -->
-            <div class="form-section">
-                <h2>Quick Access</h2>
-                <div class="quick-links">
-                    <a href="{% url 'dashboard' %}" class="quick-link">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                    <a href="{% url 'my_achievements' %}" class="quick-link">
-                        <i class="fas fa-trophy"></i> Achievements
-                    </a>
-                    <a href="{% url 'my_streaks' %}" class="quick-link">
-                        <i class="fas fa-fire"></i> Streaks
-                    </a>
-                    <a href="{% url 'my_notes' %}" class="quick-link">
-                        <i class="fas fa-sticky-note"></i> Notes
-                    </a>
-                    <a href="{% url 'my_highlights' %}" class="quick-link">
-                        <i class="fas fa-highlighter"></i> Highlights
-                    </a>
-                    <a href="{% url 'reading_lists' %}" class="quick-link">
-                        <i class="fas fa-bookmark"></i> Saved
-                    </a>
                 </div>
             </div>
             

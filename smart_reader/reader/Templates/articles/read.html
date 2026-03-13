@@ -990,8 +990,8 @@
                     <div class="progress-stat-label">Completed</div>
                 </div>
                 <div class="progress-stat">
-                    <div class="progress-stat-value" id="timeSpent">{{ progress.time_spent|floatformat:0 }}</div>
-                    <div class="progress-stat-label">Seconds</div>
+                    <div class="progress-stat-value" id="timeSpent">0s</div>
+                    <div class="progress-stat-label">Time Spent</div>
                 </div>
             </div>
             
@@ -1027,7 +1027,14 @@
         <!-- Notes -->
         {% if user.is_authenticated %}
         <div class="sidebar-card">
-            <h3 class="sidebar-title"><i class="fas fa-sticky-note"></i> Notes ({{ user_notes.count }})</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                <h3 class="sidebar-title" style="margin-bottom: 0;"><i class="fas fa-sticky-note"></i> Notes ({{ user_notes_count }})</h3>
+                {% if user_notes_count > 3 %}
+                <a href="{% url 'my_notes' %}?article={{ article.id }}" style="font-size: 0.8125rem; font-weight: 600; text-decoration: none;">
+                    View all
+                </a>
+                {% endif %}
+            </div>
             
             <form method="POST" action="{% url 'save_note' %}" class="note-form">
                 {% csrf_token %}
@@ -1056,6 +1063,11 @@
                 </div>
                 {% endfor %}
             </div>
+            {% if user_notes_count > 3 %}
+            <p style="margin-top: 0.75rem; font-size: 0.8125rem; color: var(--text-secondary); text-align: center;">
+                Showing latest 3 notes from this article.
+            </p>
+            {% endif %}
             {% endif %}
         </div>
         {% endif %}
@@ -1123,14 +1135,23 @@
 <!-- Hidden inputs for JS -->
 <input type="hidden" id="articleId" value="{{ article.id }}">
 <input type="hidden" id="lastPosition" value="{{ progress.last_position|default:0 }}">
-<input type="hidden" id="maxProgress" value="{{ progress.max_scroll_percentage|default:0 }}">
+<input type="hidden" id="maxProgress" value="{% if progress.is_completed %}100{% else %}{{ progress.max_scroll_percentage|default:0 }}{% endif %}">
+<input type="hidden" id="isCompleted" value="{% if progress.is_completed %}true{% else %}false{% endif %}">
 {% endblock %}
 
 {% block extra_js %}
 <script>
     // Pass Django context to JavaScript - these values are needed by the external script
     window.initialTimeFromDb = {% if progress %}{{ progress.time_spent|default:0 }}{% else %}0{% endif %};
-    console.log('SmartReader Template Loaded - Version fix3');
+    
+    // Pass saved highlights to JavaScript for restoration
+    window.savedHighlights = [
+        {% for highlight in user_highlights %}
+        { "text": "{{ highlight.text|escapejs }}", "color": "{{ highlight.color }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    console.log('SmartReader Template Loaded - Version fix7');
 </script>
-<script src="{% static 'js/article_read.js' %}?v=fix3"></script>
+<script src="{% static 'js/article_read.js' %}?v=fix7"></script>
 {% endblock %}

@@ -696,39 +696,6 @@ mark.highlight-orange { background: #fed7aa; }
     background: var(--border);
 }
 
-.notification-toast {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem 1.5rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    z-index: 10001;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    animation: slideInRight 0.3s ease-out forwards;
-    max-width: 400px;
-}
-
-.notification-toast.success {
-    border-left: 4px solid #10b981;
-}
-
-.notification-toast.error {
-    border-left: 4px solid #ef4444;
-}
-
-.notification-toast.warning {
-    border-left: 4px solid #f59e0b;
-}
-
-.notification-toast.info {
-    border-left: 4px solid #6366f1;
-}
-
 /* Animations */
 @keyframes modalSlideIn {
     from {
@@ -815,12 +782,5 @@ mark.highlight-orange { background: #fed7aa; }
     .notification-modal {
         max-width: 90vw;
         padding: 1.5rem;
-    }
-    
-    .notification-toast {
-        bottom: 1rem;
-        right: 1rem;
-        left: 1rem;
-        max-width: none;
     }
 }

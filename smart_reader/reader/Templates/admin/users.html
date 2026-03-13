@@ -503,7 +503,7 @@
                         <td>
                             {% if user.is_superuser %}
                             <span class="role-badge super-admin"><i class="fas fa-crown"></i> Super Admin</span>
-                            {% elif user.is_staff %}
+                            {% elif user.is_staff or user.email in admin_emails %}
                             <span class="role-badge admin"><i class="fas fa-shield-alt"></i> Admin</span>
                             {% else %}
                             <span class="role-badge user"><i class="fas fa-user"></i> User</span>
@@ -512,7 +512,7 @@
                         <td>{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</td>
                         <td>
                             <div class="action-btns">
-                                {% if not user.is_superuser %}
+                                {% if not user.is_superuser and user.email not in admin_emails %}
                                 <form method="POST" action="{% url 'admin_toggle_user' user.id %}" style="display: inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="action-btn toggle" title="{% if user.is_active %}Deactivate{% else %}Activate{% endif %}">

@@ -1,20 +1,5 @@
 // Article Reading Page JavaScript - Extracted for Performance
-// Get CSRF token from cookie
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-const csrftoken = getCookie('csrftoken');
+// Use CSRF token from base template (already defined globally)
 
 // Initialize from page data
 let articleId, articleContent, startTime, lastSaveTime, selectedColor;
@@ -49,6 +34,55 @@ function writeLocalProgress(progress) {
     }
 }
 
+// Restore saved highlights on page load
+function restoreSavedHighlights() {
+    if (typeof window.savedHighlights === 'undefined' || !window.savedHighlights || !articleContent) {
+        return;
+    }
+    
+    const highlights = window.savedHighlights;
+    console.log('SmartReader: Restoring', highlights.length, 'saved highlights');
+    
+    highlights.forEach(function(highlight) {
+        const text = highlight.text;
+        const color = highlight.color || 'yellow';
+        
+        if (!text || text.trim().length === 0) return;
+        
+        // Use TreeWalker to find the text in the article content
+        const walker = document.createTreeWalker(
+            articleContent,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        let node;
+        let found = false;
+        
+        while ((node = walker.nextNode()) && !found) {
+            const nodeText = node.textContent;
+            const index = nodeText.indexOf(text);
+            
+            if (index !== -1) {
+                try {
+                    const range = document.createRange();
+                    range.setStart(node, index);
+                    range.setEnd(node, index + text.length);
+                    
+                    const mark = document.createElement('mark');
+                    mark.className = 'highlight-' + color;
+                    mark.style.cursor = 'pointer';
+                    range.surroundContents(mark);
+                    found = true;
+                } catch (e) {
+                    console.warn('Could not restore highlight:', text.substring(0, 30) + '...');
+                }
+            }
+        }
+    });
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     console.log('SmartReader: Initializing article reader...');
@@ -68,10 +102,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get progress values - initialTimeFromDb is set as global var in template
     initialTimeFromDb = typeof window.initialTimeFromDb !== 'undefined' ? Number(window.initialTimeFromDb) : 0;
     
+    // Check if article is already completed
+    const isCompletedEl = document.getElementById('isCompleted');
+    const isAlreadyCompleted = isCompletedEl && isCompletedEl.value === 'true';
+    
     const maxProgressEl = document.getElementById('maxProgress');
     maxProgressReached = maxProgressEl ? parseInt(maxProgressEl.value) || 0 : 0;
+    
+    // If already completed, ensure it stays at 100%
+    if (isAlreadyCompleted) {
+        maxProgressReached = 100;
+    }
+    
     const localProgress = readLocalProgress();
-    if (localProgress) {
+    if (localProgress && !isAlreadyCompleted) {
         initialTimeFromDb = Math.max(initialTimeFromDb, Number(localProgress.timeSpent) || 0);
         maxProgressReached = Math.max(maxProgressReached, Number(localProgress.maxProgress) || 0);
     }
@@ -82,6 +126,9 @@ document.addEventListener('DOMContentLoaded', function() {
     lastDisplayUpdate = Date.now();
     progressSaveInFlight = false;
     savedSelectionRange = null;
+    
+    // Restore saved highlights
+    restoreSavedHighlights();
     
     // Scroll to last position
     const lastPosEl = document.getElementById('lastPosition');
@@ -110,6 +157,18 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(function() {
         saveProgress();
     }, 30000);
+    
+    // Save progress when user leaves the page (using sendBeacon for reliability)
+    window.addEventListener('beforeunload', function() {
+        saveProgressOnUnload();
+    });
+    
+    // Also save on visibility change (when tab is hidden)
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            saveProgressOnUnload();
+        }
+    });
     
     console.log('SmartReader: Initialized! Time:', initialTimeFromDb, 'Progress:', maxProgressReached + '%');
 });
@@ -156,20 +215,56 @@ function closeNotification() {
     modal.style.display = 'none';
 }
 
-function showToast(message, type = 'info', duration = 3000) {
+// Toast notification matching Django messages style
+function showToast(message, type = 'info', duration = 2500) {
+    // Remove existing toast if any
+    const existing = document.querySelector('.toast-message');
+    if (existing) existing.remove();
+    
     const toast = document.createElement('div');
-    toast.className = `notification-toast ${type}`;
-    toast.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-        <span>${message}</span>
+    toast.className = 'toast-message';
+    // Standardize message wording for highlights
+    let displayMsg = message;
+    if (message.toLowerCase().includes('rating saved')) {
+        displayMsg = 'Rating saved successfully!';
+    } else if (message.toLowerCase().includes('highlight saved')) {
+        displayMsg = 'Highlight saved successfully!';
+    }
+    toast.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;font-size:18px;"></i><span>${displayMsg}</span>`;
+    toast.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-left: 4px solid #10b981;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 14px;
+        color: #333;
+        z-index: 10001;
+        animation: toastSlideIn 0.3s ease;
     `;
     
-    document.body.appendChild(toast);
+    // Add animation keyframes if not exists
+    if (!document.getElementById('toastAnimStyle')) {
+        const style = document.createElement('style');
+        style.id = 'toastAnimStyle';
+        style.textContent = `
+            @keyframes toastSlideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
-    setTimeout(() => {
-        toast.style.animation = 'slideInRight 0.3s ease-out reverse';
-        setTimeout(() => toast.remove(), 300);
-    }, duration);
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
 }
 
 // Style conclusion paragraph
@@ -225,18 +320,17 @@ function updateProgress() {
         progressBar.style.width = currentPercentage + '%';
     }
     
-    // Always update sidebar to show CURRENT scroll position for real-time feedback
-    updateProgressDisplay(currentPercentage);
-    
-    // Update max progress reached (for saving)
+    // Update max progress reached (for saving) - progress only increases, never decreases
     if (currentPercentage > maxProgressReached) {
         maxProgressReached = currentPercentage;
     }
     
     if (hasReachedConclusion() && maxProgressReached < 100) {
         maxProgressReached = 100;
-        updateProgressDisplay(100);
     }
+    
+    // Always show max progress reached in sidebar (never decrease)
+    updateProgressDisplay(maxProgressReached);
 
     writeLocalProgress({
         maxProgress: maxProgressReached,
@@ -247,13 +341,29 @@ function updateProgress() {
     return { scrollTop, currentPercentage, maxPercentage: maxProgressReached };
 }
 
+// Format seconds as readable time string
+function formatTime(totalSeconds) {
+    totalSeconds = Math.floor(totalSeconds);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+    } else {
+        return `${seconds}s`;
+    }
+}
+
 // Update time display
 function updateTimeDisplay() {
     const currentSessionTime = Math.floor((Date.now() - pageStartTime) / 1000);
     const displayTime = Math.floor(initialTimeFromDb) + currentSessionTime;
     const timeSpentEl = document.getElementById('timeSpent');
     if (timeSpentEl) {
-        timeSpentEl.textContent = displayTime;
+        timeSpentEl.textContent = formatTime(displayTime);
     }
     // Also update sidebar progress to make sure it's in sync
     updateProgressDisplay(maxProgressReached);
@@ -336,6 +446,40 @@ function saveProgress() {
     .finally(() => {
         progressSaveInFlight = false;
     });
+}
+
+// Save progress on page unload using sendBeacon (works even when page is closing)
+function saveProgressOnUnload() {
+    if (!articleId) return;
+    
+    const { scrollTop, currentPercentage, maxPercentage } = updateProgress();
+    const currentTime = Date.now();
+    const timeSpent = Math.floor((currentTime - lastSaveTime) / 1000);
+    
+    // Use sendBeacon for reliable delivery on page unload
+    if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify({
+            article_id: articleId,
+            position: scrollTop,
+            percentage: maxPercentage, // Send max percentage to ensure completion is recorded
+            time: timeSpent,
+            csrfmiddlewaretoken: csrftoken  // Include CSRF token in body
+        })], { type: 'application/json' });
+        
+        navigator.sendBeacon('/save-progress/', blob);
+    } else {
+        // Fallback for older browsers - synchronous XMLHttpRequest
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/save-progress/', false); // Synchronous
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('X-CSRFToken', csrftoken);
+        xhr.send(JSON.stringify({
+            article_id: articleId,
+            position: scrollTop,
+            percentage: maxPercentage,
+            time: timeSpent
+        }));
+    }
 }
 
 // Show completion notification
@@ -455,21 +599,43 @@ function applyHighlightToRange(range, color) {
 }
 
 function highlightSelection(color) {
-    const range = getActiveSelectionRange();
+    let range = getActiveSelectionRange();
     if (!range) {
-        showToast('Select some article text first.', 'warning', 2000);
+        showToast('Select some text first', 'warning');
         return;
     }
 
-    const text = range.toString().trim();
-    if (!text) {
-        showToast('Select some article text first.', 'warning', 2000);
+    // Expand selection to full words
+    let text = range.toString();
+    if (!text.trim()) {
+        showToast('Select some text first', 'warning');
         return;
+    }
+
+    // Only expand if selection is not a full word
+    const wordRegex = /^\s*\S+\s*$/;
+    if (!wordRegex.test(text)) {
+        // Expand left
+        let startOffset = range.startOffset;
+        let endOffset = range.endOffset;
+        let node = range.startContainer;
+        let nodeText = node.textContent;
+        // Expand start
+        while (startOffset > 0 && !/\s/.test(nodeText[startOffset - 1])) {
+            startOffset--;
+        }
+        // Expand end
+        while (endOffset < nodeText.length && !/\s/.test(nodeText[endOffset])) {
+            endOffset++;
+        }
+        range.setStart(node, startOffset);
+        range.setEnd(node, endOffset);
+        text = range.toString();
     }
 
     const applied = applyHighlightToRange(range, color);
     if (!applied) {
-        showToast('This selection could not be highlighted. Try a shorter selection.', 'error', 2500);
+        showToast('Could not highlight', 'error');
         return;
     }
 
@@ -481,16 +647,16 @@ function highlightSelection(color) {
         },
         body: JSON.stringify({
             article_id: articleId,
-            text: text,
+            text: text.trim(),
             color: color
         })
     })
     .then(response => response.json())
     .then(() => {
-        showToast('Highlight saved successfully!', 'success', 2000);
+        showToast('Highlight saved!', 'success');
     })
     .catch(() => {
-        showToast('Highlight added on page, but saving failed.', 'warning', 2500);
+        showToast('Highlight applied', 'info');
     });
 
     const selection = window.getSelection();
@@ -553,10 +719,10 @@ function selectHighlightColor(color, btn) {
             })
             .then(response => response.json())
             .then(() => {
-                showToast('Highlighted with ' + color + '!', 'success', 2000);
+                showToast('Highlighted!', 'success');
             })
             .catch(() => {
-                showToast('Highlight applied but save failed.', 'warning', 2500);
+                // Applied locally
             });
             
             // Clear selection
@@ -570,38 +736,68 @@ function selectHighlightColor(color, btn) {
             if (selectionPopup) {
                 selectionPopup.classList.remove('active');
             }
-        } else {
-            showToast('Could not highlight. Try a simpler selection.', 'error', 2500);
         }
-    } else {
-        showToast(`${color.charAt(0).toUpperCase() + color.slice(1)} selected. Now select text in the article.`, 'info', 2000);
     }
 }
 
 // Bookmark toggle
 function toggleBookmark() {
+    const btn = document.getElementById('bookmarkBtn');
+    if (!btn) {
+        console.error('Bookmark button not found');
+        return;
+    }
+    
+    // Ensure articleId is set
+    if (!articleId) {
+        const articleIdEl = document.getElementById('articleId');
+        if (articleIdEl) {
+            articleId = articleIdEl.value;
+        }
+    }
+    
+    if (!articleId) {
+        console.error('Article ID not found');
+        return;
+    }
+    
+    // Disable button while processing
+    btn.disabled = true;
+    
+    console.log('Toggling bookmark for article:', articleId);
+    
     fetch('/toggle-bookmark/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken
         },
-        body: JSON.stringify({ article_id: articleId })
+        body: JSON.stringify({ article_id: parseInt(articleId) })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Bookmark response status:', response.status);
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
-        const btn = document.getElementById('bookmarkBtn');
+        console.log('Bookmark response data:', data);
         if (data.status === 'added') {
             btn.classList.remove('btn-secondary');
             btn.classList.add('btn-primary');
             btn.innerHTML = '<i class="fas fa-bookmark"></i> Bookmarked';
-            showToast('Article bookmarked!', 'success', 2000);
-        } else {
+        } else if (data.status === 'removed') {
             btn.classList.remove('btn-primary');
             btn.classList.add('btn-secondary');
             btn.innerHTML = '<i class="far fa-bookmark"></i> Bookmark';
-            showToast('Bookmark removed!', 'info', 2000);
         }
+    })
+    .catch(error => {
+        console.error('Bookmark error:', error);
+    })
+    .finally(() => {
+        btn.disabled = false;
     });
 }
 
@@ -678,10 +874,10 @@ function rateArticle(score) {
         if (avgRatingEl && data.avg_rating) {
             avgRatingEl.textContent = data.avg_rating;
         }
-        showToast('Rating saved!', 'success', 2000);
+        showToast('Rating saved!', 'success');
     })
     .catch(err => {
-        showToast('Failed to save rating', 'error', 2000);
+        showToast('Rating failed', 'error');
     });
 }
 
@@ -705,11 +901,10 @@ function submitFeedback(event) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            showNotification('Thank You!', 'Your feedback has been submitted successfully.', 'success', [
-                { text: 'Close', onclick: 'closeNotificationAndClear()', class: 'btn-primary' }
-            ]);
+            showToast('Feedback saved successfully!', 'success');
+            closeNotificationAndClear();
         } else {
-            showNotification('Error', 'Failed to submit feedback. Please try again.', 'error');
+            showToast('Failed to submit feedback. Please try again.', 'error');
         }
     })
     .catch(err => {
@@ -731,7 +926,7 @@ function shareArticle() {
         });
     } else {
         navigator.clipboard.writeText(window.location.href);
-        showToast('Link copied to clipboard!', 'success', 2000);
+        showToast('Link copied!', 'success');
     }
 }
 

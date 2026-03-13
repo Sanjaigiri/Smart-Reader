@@ -2173,7 +2173,7 @@ def edit_reading_list(request, list_id):
                     is_valid_pin, pin_message = validate_reading_list_pin(new_pin)
                     if not is_valid_pin:
                         return JsonResponse({'status': 'error', 'message': pin_message})
-                elif not reading_list.access_pin:
+                elif reading_list.is_public and not reading_list.access_pin:
                     return JsonResponse({'status': 'error', 'message': 'Private lists need a 4-digit PIN.'})
             
             reading_list.name = name
