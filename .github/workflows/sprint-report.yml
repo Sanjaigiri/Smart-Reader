@@ -2,7 +2,8 @@ name: Sprint Report
 
 on:
   schedule:
-    - cron: "0 * * * *"
+       - cron: "*/5 * * * *"   # every 5 minutes (TEMPORARY - switch back later)
+
   workflow_dispatch: {}
 
 permissions:
