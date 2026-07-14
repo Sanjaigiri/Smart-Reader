@@ -28,6 +28,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.SPRINT_REPORT_PAT }}
           GITHUB_PROJECT_OWNER: Sanjaigiri
           GITHUB_PROJECT_NUMBER: "1"
+          SPRINT_START: "2026-07-13"
+          SPRINT_END: "2026-07-27"
         run: python sprint_report.py --pdf ../../shared_sprint_report/latest_report.pdf
 
       - name: Commit updated report
