@@ -157,7 +157,6 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
     scope = build_scope(items, transitions, start, end)
     scoped = scope["scoped"]
     by_status = scope["by_status"]
-    by_assignee = scope["by_assignee"]
     by_label = scope["by_label"]
     blocked_items = scope["blocked_items"]
 
@@ -176,6 +175,14 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
             days_left = None
 
     styles = getSampleStyleSheet()
+    # A separate heading style, used only for Task Timing / Movement Log:
+    # keepWithNext stops a page break from landing directly after the
+    # heading, so it can't get orphaned alone at a page's bottom. Applying
+    # this to Backlog Items (the very large first table) instead caused the
+    # whole table to jump to page 2, wasting page 1 - so that one keeps the
+    # plain, unprotected Heading2 and just flows naturally (it's right after
+    # the title, so it always has plenty of room and never actually orphans).
+    heading_kwn = ParagraphStyle("Heading2KeepWithNext", parent=styles["Heading2"], keepWithNext=True)
     doc = SimpleDocTemplate(out_path, pagesize=A4, topMargin=1.5 * cm, bottomMargin=1.8 * cm,
                              leftMargin=1.5 * cm, rightMargin=1.5 * cm)
     story = []
@@ -242,16 +249,6 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
     ]))
     story.append(Spacer(1, 0.4 * cm))
 
-    if by_assignee:
-        rows = [[_header_cell("Assignee"), _header_cell("Breakdown")]]
-        for assignee, counts in sorted(by_assignee.items()):
-            rows.append([_cell(assignee), _cell(", ".join(f"{n} {s}" for s, n in sorted(counts.items())))])
-        story.append(KeepTogether([
-            Paragraph("By assignee", styles["Heading3"]),
-            _styled_table(rows, col_widths=[5 * cm, 10 * cm]),
-        ]))
-        story.append(Spacer(1, 0.4 * cm))
-
     if by_label:
         rows = [[_header_cell("Label"), _header_cell("Breakdown")]]
         for label, counts in sorted(by_label.items()):
@@ -314,7 +311,7 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
         ])
     # NOT KeepTogether, no forced page break - grows with the backlog size,
     # should fill whatever space is left and split/continue naturally.
-    story.append(Paragraph("Task Timing", styles["Heading2"]))
+    story.append(Paragraph("Task Timing", heading_kwn))
     if any_timing:
         story.append(_styled_table(
             timing_rows, col_widths=[1.1 * cm, 3.6 * cm, 2.3 * cm, 2.8 * cm, 2.3 * cm, 2.8 * cm, 2.1 * cm]))
@@ -340,7 +337,7 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
             ])
     # NOT KeepTogether, no forced page break - grows with move count, should
     # fill whatever space is left and split/continue naturally.
-    story.append(Paragraph("Movement Log (full history, from GitHub)", styles["Heading2"]))
+    story.append(Paragraph("Movement Log (full history, from GitHub)", heading_kwn))
     if any_moves:
         story.append(_styled_table(
             move_rows, col_widths=[1.2 * cm, 4.0 * cm, 2.1 * cm, 2.1 * cm, 2.6 * cm, 4.0 * cm]))
