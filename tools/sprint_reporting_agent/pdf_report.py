@@ -19,7 +19,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, KeepTogether, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, KeepTogether
 from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.charts.legends import Legend
@@ -272,10 +272,10 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
         story.append(Spacer(1, 0.6 * cm))
 
     # --- Team performance: who's completing work, how fast, who's active ---
-    # Each major section from here on starts on its own fresh page - avoids
-    # both a heading getting orphaned alone at the bottom of a page AND a
-    # section awkwardly starting mid-page with little room left.
-    story.append(PageBreak())
+    # Small and bounded (one row per person) - KeepTogether is safe here: it
+    # either fits in whatever space is left on the current page, or the
+    # whole (small) block moves to the next page. No forced page break -
+    # let it fill leftover space naturally.
     team_stats = build_team_performance(scoped)
     team_block = [Paragraph("Team Performance", styles["Heading2"])]
     if team_stats:
@@ -312,8 +312,8 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
             _cell((timing["completed_at"] or "")[:16].replace("T", " ") if timing["completed_at"] else "-"),
             _cell(format_duration(timing["duration_seconds"])),
         ])
-    # NOT KeepTogether - grows with the backlog size, should split naturally.
-    story.append(PageBreak())
+    # NOT KeepTogether, no forced page break - grows with the backlog size,
+    # should fill whatever space is left and split/continue naturally.
     story.append(Paragraph("Task Timing", styles["Heading2"]))
     if any_timing:
         story.append(_styled_table(
@@ -338,8 +338,8 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
                 _cell(t.get("changed_by") or "unknown"),
                 _cell(t["detected_at"][:19].replace("T", " ")),
             ])
-    # NOT KeepTogether - grows with move count, should split naturally.
-    story.append(PageBreak())
+    # NOT KeepTogether, no forced page break - grows with move count, should
+    # fill whatever space is left and split/continue naturally.
     story.append(Paragraph("Movement Log (full history, from GitHub)", styles["Heading2"]))
     if any_moves:
         story.append(_styled_table(
