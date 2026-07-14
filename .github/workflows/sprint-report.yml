@@ -1,0 +1,38 @@
+name: Sprint Report
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r tools/sprint_reporting_agent/requirements.txt
+
+      - name: Generate report
+        working-directory: tools/sprint_reporting_agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.SPRINT_REPORT_PAT }}
+          GITHUB_PROJECT_OWNER: Sanjaigiri
+          GITHUB_PROJECT_NUMBER: "1"
+        run: python sprint_report.py --pdf ../../shared_sprint_report/latest_report.pdf
+
+      - name: Commit updated report
+        run: |
+          git config user.name "sprint-report-bot"
+          git config user.email "actions@github.com"
+          git add shared_sprint_report/latest_report.pdf
+          git diff --staged --quiet || git commit -m "Update shared sprint report [skip ci]"
+          git push
