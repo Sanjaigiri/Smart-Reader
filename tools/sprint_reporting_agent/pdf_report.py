@@ -24,7 +24,7 @@ from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.charts.legends import Legend
 
-from sprint_report import build_scope, compute_timing, build_team_performance, format_duration
+from sprint_report import build_scope, compute_timing, build_team_performance, format_duration, last_touched_by
 
 # Sibling of Smart-Reader itself, not nested inside the tool's own code
 # folder - Smart-Reader/tools/sprint_reporting_agent/../../.. == SMART_READER/
@@ -197,12 +197,13 @@ def build_pdf(items, transitions, project_title, start, end, out_path=None):
     item_rows = [[_header_cell(h) for h in
                   ("ID", "Title", "Status", "Assignee(s)", "Changed By", "Created", "Closed")]]
     for item_id, (item, moves) in sorted(scoped.items(), key=lambda kv: kv[1][0]["number"] or 0):
+        last_by, _ = last_touched_by(item, moves)
         item_rows.append([
             _cell(f"#{item['number']}"),
             _cell(item["title"]),
             _status_cell(item["status"]),
             _cell(", ".join(item["assignees"]) or "Unassigned"),
-            _cell(item.get("status_changed_by") or "unknown"),
+            _cell(last_by or "unknown"),
             _cell((item["created_at"] or "")[:16].replace("T", " ")),
             _cell((item["closed_at"] or "-")[:16].replace("T", " ")),
         ])

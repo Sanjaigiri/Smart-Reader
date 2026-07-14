@@ -92,14 +92,34 @@ def format_duration(seconds):
     return f"{minutes}m"
 
 
+def last_touched_by(item, moves):
+    """Who most recently changed this item's status, and when - always from
+    the authoritative move history (GitHub's timeline), never from the
+    live "current field" snapshot. The live snapshot's creator/updatedAt
+    turned out to be unreliable in practice (it can reset to whoever last
+    merely *viewed* the project in some cases) - the timeline is the
+    immutable, append-only source of truth and should always be preferred.
+    Falls back to the live snapshot only when an item has literally never
+    moved (no history at all).
+    """
+    if moves:
+        return moves[-1]["changed_by"], moves[-1]["detected_at"]
+    return item.get("status_changed_by"), item.get("status_updated_at")
+
+
 def compute_timing(item, moves):
     """Who picked up an item and when, who finished it and when, and how
-    long it took - built from the Movement Log (real GitHub actor +
-    timestamp per move, see github_client.fetch_project_items). Answers
-    "who took this task at what time, and who completed it at what time".
+    long it took - built from the full Movement Log (real GitHub actor +
+    timestamp per move). Generalized to work with any custom column names
+    (Backlog, Todo, In Progress, Testing, Done, ...), not just a fixed
+    "In Progress"/"Done" pair:
+    - "taken" = the first recorded move (i.e. the first time anyone touched
+      it after creation), whatever column it moved into.
+    - "completed" = the most recent move into a column literally named
+      "Done" (if the item has ever reached one).
     """
-    taken = next((t for t in moves if t["to_status"] == "In Progress"), None)
-    done = next((t for t in moves if t["to_status"] == "Done"), None)
+    taken = moves[0] if moves else None
+    done = next((t for t in reversed(moves) if t["to_status"] == "Done"), None)
     taken_at = taken["detected_at"] if taken else None
     completed_at = done["detected_at"] if done else None
     duration_seconds = None
@@ -117,8 +137,9 @@ def compute_timing(item, moves):
 
 def build_team_performance(scoped):
     """Per-person stats: how many tasks they completed and how long each
-    took, plus how many they currently have active (In Progress/Testing,
-    attributed to whoever most recently changed that item's status)."""
+    took, plus how many they currently have active (anything not "Done",
+    attributed to whoever most recently moved it - from the authoritative
+    history, not the live snapshot)."""
     stats = defaultdict(lambda: {"completed": 0, "active": 0, "durations": []})
     for item_id, (item, moves) in scoped.items():
         timing = compute_timing(item, moves)
@@ -126,8 +147,10 @@ def build_team_performance(scoped):
             stats[timing["completed_by"]]["completed"] += 1
             if timing["duration_seconds"] is not None:
                 stats[timing["completed_by"]]["durations"].append(timing["duration_seconds"])
-        if item["status"] in ("In Progress", "Testing") and item.get("status_changed_by"):
-            stats[item["status_changed_by"]]["active"] += 1
+        if item["status"] != "Done":
+            who, _ = last_touched_by(item, moves)
+            if who:
+                stats[who]["active"] += 1
     return stats
 
 
@@ -232,8 +255,9 @@ def render_report(items, transitions, project_title, start, end):
     for item_id, (item, moves) in sorted(scoped.items(), key=lambda kv: kv[1][0]["number"] or 0):
         lines.append(f"### #{item['number']} — {item['title']}")
         lines.append(f"- Current status: **{item['status']}**")
-        if item.get("status_changed_by"):
-            lines.append(f"- Last changed by: {item['status_changed_by']} at {item.get('status_updated_at')}")
+        last_by, last_at = last_touched_by(item, moves)
+        if last_by:
+            lines.append(f"- Last changed by: {last_by} at {last_at}")
         if is_blocked(item):
             lines.append("- ⚠ Blocked")
         lines.append(f"- Assignee(s): {', '.join(item['assignees']) or 'Unassigned'}")
