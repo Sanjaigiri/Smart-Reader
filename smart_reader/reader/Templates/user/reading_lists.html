@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Reading Lists{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .page-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .lists-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .create-list-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 2px dashed var(--border);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .create-list-card h3 {
+        margin-bottom: 1rem;
+    }
+    
+    .create-form {
+        display: none;
+        max-width: 500px;
+        margin: 0 auto;
+        text-align: left;
+    }
+    
+    .create-form.active {
+        display: block;
+    }
+    
+    .lists-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .list-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        transition: all 0.3s;
+    }
+    
+    .list-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .list-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .list-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .list-description {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        margin-bottom: 1rem;
+    }
+    
+    .list-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .list-count {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 1024px) {
+        .lists-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .lists-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-list"></i> Reading Lists</h1>
+</div>
+
+<div class="lists-page">
+    <div class="create-list-card">
+        <div id="createBtn">
+            <i class="fas fa-plus" style="font-size: 2rem; color: var(--primary); margin-bottom: 1rem;"></i>
+            <h3>Create New Reading List</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Organize your articles into custom collections</p>
+            <button class="btn btn-primary" onclick="showCreateForm()">
+                <i class="fas fa-plus"></i> Create List
+            </button>
+        </div>
+        
+        <form method="POST" class="create-form" id="createForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">List Name</label>
+                <input type="text" name="name" class="form-control" placeholder="e.g., Machine Learning" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description (optional)</label>
+                <textarea name="description" class="form-control" placeholder="What's this list about?"></textarea>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="is_public" id="isPublic">
+                <label for="isPublic">Make this list public</label>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary">Create List</button>
+                <button type="button" class="btn btn-secondary" onclick="hideCreateForm()">Cancel</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="lists-grid">
+        {% for list in reading_lists %}
+        <div class="list-card">
+            <div class="list-icon">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <h3 class="list-title">{{ list.name }}</h3>
+            <p class="list-description">{{ list.description|default:"No description" }}</p>
+            <div class="list-meta">
+                <span class="list-count">
+                    <i class="fas fa-book"></i> {{ list.articles.count }} articles
+                </span>
+                {% if list.is_public %}
+                <span class="badge badge-success"><i class="fas fa-globe"></i> Public</span>
+                {% else %}
+                <span class="badge badge-secondary"><i class="fas fa-lock"></i> Private</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">
+            <p>No reading lists yet. Create your first one above!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showCreateForm() {
+    document.getElementById('createBtn').style.display = 'none';
+    document.getElementById('createForm').classList.add('active');
+}
+
+function hideCreateForm() {
+    document.getElementById('createBtn').style.display = 'block';
+    document.getElementById('createForm').classList.remove('active');
+}
+</script>
+{% endblock %}

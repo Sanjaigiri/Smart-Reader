@@ -1,0 +1,832 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Control Panel - SmartReader{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --admin-sidebar: #1e1e2d;
+        --admin-sidebar-hover: #2a2a3d;
+        --admin-accent: #6366f1;
+    }
+    
+    .admin-layout {
+        display: flex;
+        min-height: calc(100vh - 70px);
+    }
+    
+    /* Sidebar */
+    .admin-sidebar {
+        width: 260px;
+        background: var(--admin-sidebar);
+        padding: 1.5rem 0;
+        position: sticky;
+        top: 70px;
+        height: calc(100vh - 70px);
+        overflow-y: auto;
+    }
+    
+    .admin-logo {
+        padding: 0 1.5rem 1.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .admin-logo h2 {
+        color: white;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .admin-logo h2 i {
+        color: var(--admin-accent);
+    }
+    
+    .admin-logo small {
+        display: block;
+        color: rgba(255,255,255,0.5);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    
+    .admin-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .admin-menu-section {
+        padding: 0.75rem 1.5rem 0.5rem;
+        color: rgba(255,255,255,0.4);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+    
+    .admin-menu a {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        color: rgba(255,255,255,0.7);
+        text-decoration: none;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+    }
+    
+    .admin-menu a:hover {
+        background: var(--admin-sidebar-hover);
+        color: white;
+    }
+    
+    .admin-menu a.active {
+        background: var(--admin-sidebar-hover);
+        color: white;
+        border-left-color: var(--admin-accent);
+    }
+    
+    .admin-menu a i {
+        width: 20px;
+        text-align: center;
+    }
+    
+    .menu-badge {
+        margin-left: auto;
+        background: var(--admin-accent);
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    /* Main Content */
+    .admin-main {
+        flex: 1;
+        padding: 2rem;
+        background: var(--bg-secondary);
+    }
+    
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .admin-header h1 {
+        font-size: 1.75rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .admin-user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .admin-user-info .avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--admin-accent), #8b5cf6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .admin-user-info .user-details small {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 1200px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: 1fr; }
+        .admin-sidebar { display: none; }
+    }
+    
+    .stat-card {
+        background: var(--bg-primary);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .stat-icon.users { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+    .stat-icon.articles { background: linear-gradient(135deg, #10b981, #34d399); color: white; }
+    .stat-icon.views { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; }
+    .stat-icon.visits { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: white; }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1;
+    }
+    
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .stat-change {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .stat-change.positive { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .stat-change.negative { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 1200px) {
+        .quick-actions { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    .quick-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .quick-action-btn:hover {
+        border-color: var(--admin-accent);
+        background: rgba(99, 102, 241, 0.05);
+    }
+    
+    .quick-action-btn i {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+    
+    .quick-action-btn.add-article i { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .quick-action-btn.manage-users i { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+    .quick-action-btn.view-analytics i { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .quick-action-btn.settings i { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    
+    /* Content Grid */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+    
+    @media (max-width: 1200px) {
+        .content-grid { grid-template-columns: 1fr; }
+    }
+    
+    .content-card {
+        background: var(--bg-primary);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+    
+    .content-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .content-card-header h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .content-card-body {
+        padding: 1rem 1.25rem;
+    }
+    
+    /* Recent Users Table */
+    .users-table {
+        width: 100%;
+    }
+    
+    .users-table th {
+        text-align: left;
+        padding: 0.75rem 0;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .users-table td {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .users-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .user-info-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .user-name {
+        font-weight: 500;
+    }
+    
+    .user-email {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .status-badge.active {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .status-badge.inactive {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    
+    /* Activity List */
+    .activity-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .activity-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+    }
+    
+    .activity-icon.read { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .activity-icon.signup { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .activity-icon.article { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-text {
+        font-size: 0.875rem;
+        color: var(--text-primary);
+    }
+    
+    .activity-time {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    /* Chart Container */
+    .chart-container {
+        height: 250px;
+        padding: 1rem 0;
+    }
+    
+    /* View All Link */
+    .view-all-link {
+        color: var(--admin-accent);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .view-all-link:hover {
+        text-decoration: underline;
+    }
+    
+    /* Admin Controls Section */
+    .admin-controls {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+        border: 1px solid var(--admin-accent);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .admin-controls h3 {
+        color: var(--admin-accent);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .admin-controls p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+    
+    .permissions-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .permission-tag {
+        background: rgba(99, 102, 241, 0.2);
+        color: var(--admin-accent);
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    
+    .permission-tag i {
+        font-size: 0.7rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="admin-logo">
+            <h2><i class="fas fa-shield-alt"></i> Admin Panel</h2>
+            <small>SmartReader Management</small>
+        </div>
+        
+        <ul class="admin-menu">
+            <li class="admin-menu-section">Main</li>
+            <li><a href="{% url 'admin_dashboard' %}" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="{% url 'admin_analytics' %}"><i class="fas fa-chart-line"></i> Analytics</a></li>
+            
+            <li class="admin-menu-section">Content Management</li>
+            <li><a href="{% url 'admin_articles' %}"><i class="fas fa-newspaper"></i> All Articles <span class="menu-badge">{{ total_articles }}</span></a></li>
+            <li><a href="{% url 'admin_add_article' %}"><i class="fas fa-plus-circle"></i> Add New Article</a></li>
+            
+            <li class="admin-menu-section">User Management</li>
+            <li><a href="{% url 'admin_users' %}"><i class="fas fa-users"></i> All Users <span class="menu-badge">{{ total_users }}</span></a></li>
+            
+            <li class="admin-menu-section">System</li>
+            <li><a href="{% url 'home' %}"><i class="fas fa-globe"></i> View Website</a></li>
+            <li><a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+            <div class="admin-user-info">
+                <div class="user-details" style="text-align: right;">
+                    <div style="font-weight: 500;">{{ request.user.first_name|default:request.user.username }}</div>
+                    <small>Administrator</small>
+                </div>
+                <div class="avatar">{{ request.user.username|slice:":1"|upper }}</div>
+            </div>
+        </div>
+        
+        <!-- Admin Controls Info -->
+        <div class="admin-controls">
+            <h3><i class="fas fa-crown"></i> Full Administrator Access</h3>
+            <p>As an administrator, you have complete control over the SmartReader platform. Regular users cannot access these features.</p>
+            <div class="permissions-list">
+                <span class="permission-tag"><i class="fas fa-check"></i> Add Articles</span>
+                <span class="permission-tag"><i class="fas fa-check"></i> Edit Articles</span>
+                <span class="permission-tag"><i class="fas fa-check"></i> Delete Articles</span>
+                <span class="permission-tag"><i class="fas fa-check"></i> Manage Users</span>
+                <span class="permission-tag"><i class="fas fa-check"></i> Deactivate Users</span>
+                <span class="permission-tag"><i class="fas fa-check"></i> View Analytics</span>
+                <span class="permission-tag"><i class="fas fa-check"></i> Track User Activity</span>
+                <span class="permission-tag"><i class="fas fa-check"></i> Site Statistics</span>
+            </div>
+        </div>
+        
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ total_users }}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-icon users"><i class="fas fa-users"></i></div>
+                </div>
+                <span class="stat-change positive"><i class="fas fa-arrow-up"></i> +{{ new_users_week }} this week</span>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ published_articles }}</div>
+                        <div class="stat-label">Published Articles</div>
+                    </div>
+                    <div class="stat-icon articles"><i class="fas fa-newspaper"></i></div>
+                </div>
+                <span class="stat-change positive">{{ total_articles }} total</span>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ total_views|default:0 }}</div>
+                        <div class="stat-label">Total Article Views</div>
+                    </div>
+                    <div class="stat-icon views"><i class="fas fa-eye"></i></div>
+                </div>
+                <span class="stat-change positive">All time</span>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">{{ visits_today|default:0 }}</div>
+                        <div class="stat-label">Visits Today</div>
+                    </div>
+                    <div class="stat-icon visits"><i class="fas fa-chart-bar"></i></div>
+                </div>
+                <span class="stat-change positive"><i class="fas fa-arrow-up"></i> {{ active_users_today }} active users</span>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <h3 style="margin-bottom: 1rem; color: var(--text-primary);"><i class="fas fa-bolt"></i> Quick Actions (Admin Only)</h3>
+        <div class="quick-actions">
+            <a href="{% url 'admin_add_article' %}" class="quick-action-btn add-article">
+                <i class="fas fa-plus"></i>
+                <div>
+                    <div style="font-weight: 500;">Add New Article</div>
+                    <small style="color: var(--text-muted);">Create new content</small>
+                </div>
+            </a>
+            <a href="{% url 'admin_users' %}" class="quick-action-btn manage-users">
+                <i class="fas fa-user-cog"></i>
+                <div>
+                    <div style="font-weight: 500;">Manage Users</div>
+                    <small style="color: var(--text-muted);">Control user access</small>
+                </div>
+            </a>
+            <a href="{% url 'admin_analytics' %}" class="quick-action-btn view-analytics">
+                <i class="fas fa-chart-pie"></i>
+                <div>
+                    <div style="font-weight: 500;">View Analytics</div>
+                    <small style="color: var(--text-muted);">Detailed reports</small>
+                </div>
+            </a>
+            <a href="{% url 'admin_articles' %}" class="quick-action-btn settings">
+                <i class="fas fa-edit"></i>
+                <div>
+                    <div style="font-weight: 500;">Edit Articles</div>
+                    <small style="color: var(--text-muted);">Modify content</small>
+                </div>
+            </a>
+        </div>
+        
+        <!-- Content Grid -->
+        <div class="content-grid">
+            <!-- Recent Users -->
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h3><i class="fas fa-users"></i> Recent Users</h3>
+                    <a href="{% url 'admin_users' %}" class="view-all-link">Manage All Users →</a>
+                </div>
+                <div class="content-card-body">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Joined</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>
+                                    <div class="user-info-cell">
+                                        <div class="user-avatar">{{ user.username|slice:":1"|upper }}</div>
+                                        <div>
+                                            <div class="user-name">{{ user.first_name|default:user.username }}</div>
+                                            <div class="user-email">{{ user.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ user.date_joined|timesince }} ago</td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="status-badge active">Active</span>
+                                    {% else %}
+                                        <span class="status-badge inactive">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'admin_users' %}" style="color: var(--admin-accent); font-size: 0.85rem;">
+                                        <i class="fas fa-cog"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-muted);">No users yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h3><i class="fas fa-clock"></i> Recent Reading Activity</h3>
+                </div>
+                <div class="content-card-body">
+                    <ul class="activity-list">
+                        {% for progress in recent_progress %}
+                        <li class="activity-item">
+                            <div class="activity-icon read"><i class="fas fa-book-reader"></i></div>
+                            <div class="activity-content">
+                                <div class="activity-text">
+                                    <strong>{{ progress.user.first_name|default:progress.user.username }}</strong> read 
+                                    <em>{{ progress.article.title|truncatechars:25 }}</em>
+                                </div>
+                                <div class="activity-time">{{ progress.last_read_at|timesince }} ago</div>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="activity-item">
+                            <div style="color: var(--text-muted); text-align: center; width: 100%; padding: 1rem;">No recent reading activity</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Visits Chart -->
+        <div class="content-card" style="margin-top: 1.5rem;">
+            <div class="content-card-header">
+                <h3><i class="fas fa-chart-area"></i> Site Visits This Week</h3>
+                <a href="{% url 'admin_analytics' %}" class="view-all-link">Detailed Analytics →</a>
+            </div>
+            <div class="content-card-body">
+                <div class="chart-container">
+                    <canvas id="visitsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Articles Section -->
+        <div class="content-card" style="margin-top: 1.5rem;">
+            <div class="content-card-header">
+                <h3><i class="fas fa-newspaper"></i> Recent Articles</h3>
+                <a href="{% url 'admin_add_article' %}" class="view-all-link"><i class="fas fa-plus"></i> Add New →</a>
+            </div>
+            <div class="content-card-body">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Views</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for article in recent_articles %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 500;">{{ article.title|truncatechars:40 }}</div>
+                                <small style="color: var(--text-muted);">{{ article.created_at|date:"M d, Y" }}</small>
+                            </td>
+                            <td>{{ article.category }}</td>
+                            <td>{{ article.views }}</td>
+                            <td>
+                                {% if article.is_published %}
+                                    <span class="status-badge active">Published</span>
+                                {% else %}
+                                    <span class="status-badge inactive">Draft</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'admin_edit_article' article.id %}" style="color: var(--admin-accent); margin-right: 0.75rem;">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'article_detail' article.slug %}" style="color: var(--text-muted);">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted);">
+                                No articles yet. <a href="{% url 'admin_add_article' %}" style="color: var(--admin-accent);">Add your first article</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const visitsData = {{ visits_data|safe }};
+    
+    const ctx = document.getElementById('visitsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: visitsData.map(d => d.date),
+            datasets: [{
+                label: 'Daily Visits',
+                data: visitsData.map(d => d.count),
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointBackgroundColor: '#6366f1',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255,255,255,0.05)'
+                    },
+                    ticks: {
+                        color: '#888'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#888'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block title %}My Bookmarks{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .page-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .bookmarks-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .bookmarks-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .bookmark-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        overflow: hidden;
+        transition: all 0.3s;
+    }
+    
+    .bookmark-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .bookmark-img {
+        height: 160px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .bookmark-img i {
+        font-size: 2.5rem;
+        color: white;
+    }
+    
+    .remove-btn {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--danger);
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    
+    .bookmark-card:hover .remove-btn {
+        opacity: 1;
+    }
+    
+    .bookmark-body {
+        padding: 1.5rem;
+    }
+    
+    .bookmark-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .bookmark-title a {
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+    
+    .bookmark-title a:hover {
+        color: var(--primary);
+    }
+    
+    .bookmark-meta {
+        display: flex;
+        gap: 1rem;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        grid-column: 1 / -1;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state p {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+    
+    @media (max-width: 1024px) {
+        .bookmarks-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .bookmarks-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-bookmark"></i> My Bookmarks</h1>
+</div>
+
+<div class="bookmarks-page">
+    <div class="bookmarks-grid">
+        {% if bookmarks %}
+            {% for bookmark in bookmarks %}
+            <div class="bookmark-card" id="bookmark-{{ bookmark.id }}">
+                <div class="bookmark-img">
+                    {% if bookmark.article.cover_image %}
+                    <img src="{{ bookmark.article.cover_image.url }}" alt="{{ bookmark.article.title }}" 
+                         style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                    <i class="fas fa-book-open"></i>
+                    {% endif %}
+                    <button class="remove-btn" onclick="removeBookmark({{ bookmark.article.id }}, {{ bookmark.id }})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="bookmark-body">
+                    <h3 class="bookmark-title">
+                        <a href="{% url 'article_detail' slug=bookmark.article.slug %}">{{ bookmark.article.title }}</a>
+                    </h3>
+                    <div class="bookmark-meta">
+                        <span><i class="far fa-clock"></i> {{ bookmark.article.estimated_read_time }} min</span>
+                        <span><i class="far fa-calendar"></i> Saved {{ bookmark.created_at|date:"M d" }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="far fa-bookmark"></i>
+                <h3>No Bookmarks Yet</h3>
+                <p>Start saving articles to read later!</p>
+                <a href="{% url 'articles' %}" class="btn btn-primary">Browse Articles</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function removeBookmark(articleId, bookmarkId) {
+    fetch('/toggle-bookmark/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ article_id: articleId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'removed') {
+            document.getElementById('bookmark-' + bookmarkId).remove();
+        }
+    });
+}
+</script>
+{% endblock %}

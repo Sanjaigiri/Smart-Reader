@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .profile-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 3rem;
+        color: white;
+        font-weight: 700;
+    }
+    
+    .profile-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2rem;
+    }
+    
+    .profile-header p {
+        color: var(--text-secondary);
+    }
+    
+    .profile-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .profile-card h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    
+    .form-label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 1rem;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .switch-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .switch {
+        position: relative;
+        width: 50px;
+        height: 26px;
+    }
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--border);
+        transition: .4s;
+        border-radius: 26px;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+    
+    .save-button {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+    }
+    
+    @media (max-width: 640px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .theme-preview.light {
+        background: #ffffff;
+        color: #333;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .theme-preview.dark {
+        background: #1a1a1a;
+        color: #e0e0e0;
+        border: 1px solid #333;
+    }
+    
+    .badge {
+        display: inline-block;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="profile-header">
+        <div class="profile-avatar">{{ user.username|slice:":1"|upper }}</div>
+        <h1>{{ user.username }}</h1>
+        <p>Member since {{ user.date_joined|date:"F Y" }}</p>
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        
+        <div class="profile-card">
+            <h2><i class="fas fa-user"></i> Personal Information</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" value="{{ user.email }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Bio</label>
+                <textarea name="bio" class="form-control" placeholder="Tell us about yourself...">{{ profile.bio }}</textarea>
+            </div>
+        </div>
+        
+        <div class="profile-card">
+            <h2><i class="fas fa-cog"></i> Reading Preferences</h2>
+            
+            <div class="form-group">
+                <label class="form-label">Weekly Reading Goal (articles)</label>
+                <input type="number" name="reading_goal" class="form-control" value="{{ profile.reading_goal }}" min="1" max="50">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Preferred Font Size (px)</label>
+                <input type="range" name="font_size" min="14" max="24" value="{{ profile.preferred_font_size }}" 
+                       class="form-control" style="padding: 0;" id="fontSizeRange">
+                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--text-muted);">
+                    <span>Small (14px)</span>
+                    <span id="fontSizeValue">{{ profile.preferred_font_size }}px</span>
+                    <span>Large (24px)</span>
+                </div>
+            </div>
+            
+            <div class="switch-group">
+                <div>
+                    <strong>Dark Mode</strong>
+                    <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        Enable dark theme for comfortable reading
+                    </p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="dark_mode" {% if profile.dark_mode %}checked{% endif %}>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="save-button">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fontSizeRange = document.getElementById('fontSizeRange');
+    const fontSizeValue = document.getElementById('fontSizeValue');
+    
+    fontSizeRange.addEventListener('input', function() {
+        fontSizeValue.textContent = this.value + 'px';
+    });
+    
+    function confirmLanguageChange() {
+        if (confirm('Do you want to change the language? The page will reload with the new language.')) {
+            document.getElementById('languageForm').submit();
+        } else {
+            // Reset to current value if cancelled
+            location.reload();
+        }
+    }
+    
+    function confirmThemeChange() {
+        if (confirm('Do you want to change the theme? The page will apply the new theme.')) {
+            document.getElementById('themeForm').submit();
+        } else {
+            // Reset to current value if cancelled
+            location.reload();
+        }
+    }
+</script>
+{% endblock %}

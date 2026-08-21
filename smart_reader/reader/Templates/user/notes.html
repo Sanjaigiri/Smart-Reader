@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block title %}My Notes{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .page-header-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .page-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .notes-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+    }
+    
+    /* Sidebar */
+    .notes-sidebar {
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+    }
+    
+    .filter-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+    }
+    
+    .filter-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-item {
+        padding: 0.625rem 0.875rem;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }
+    
+    .filter-item:hover,
+    .filter-item.active {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+    }
+    
+    /* Notes Grid */
+    .notes-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .note-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        transition: all 0.3s;
+    }
+    
+    .note-card:hover {
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .note-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .note-article {
+        font-size: 0.875rem;
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .note-article:hover {
+        text-decoration: underline;
+    }
+    
+    .note-date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    .note-quote {
+        padding: 1rem;
+        background: var(--bg-tertiary);
+        border-left: 4px solid var(--primary);
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 1rem;
+        font-style: italic;
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+    }
+    
+    .note-content {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: var(--text-primary);
+    }
+    
+    .note-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .note-actions a {
+        padding: 0.5rem;
+        color: var(--text-muted);
+        transition: color 0.2s;
+    }
+    
+    .note-actions a:hover {
+        color: var(--primary);
+    }
+    
+    .note-actions a.delete:hover {
+        color: var(--danger);
+    }
+    
+    /* Search */
+    .search-bar {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .search-bar input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        font-size: 1rem;
+        color: var(--text-primary);
+        outline: none;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        grid-column: 1 / -1;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 1024px) {
+        .notes-page {
+            grid-template-columns: 1fr;
+        }
+        
+        .notes-sidebar {
+            position: static;
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .notes-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-content">
+        <h1><i class="fas fa-sticky-note"></i> My Notes</h1>
+        <p>All your reading notes in one place</p>
+    </div>
+</div>
+
+<div class="notes-page">
+    <aside class="notes-sidebar">
+        <div class="filter-card">
+            <h3 class="filter-title">Filter by Article</h3>
+            <div class="filter-list">
+                <a href="{% url 'my_notes' %}" class="filter-item {% if not request.GET.article %}active{% endif %}">
+                    All Notes
+                </a>
+                {% for article in articles_with_notes %}
+                <a href="?article={{ article.id }}" class="filter-item {% if request.GET.article == article.id|stringformat:'s' %}active{% endif %}">
+                    {{ article.title|truncatewords:5 }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </aside>
+    
+    <main>
+        <form method="GET" class="search-bar">
+            <i class="fas fa-search" style="color: var(--text-muted);"></i>
+            <input type="text" name="q" placeholder="Search notes..." value="{{ request.GET.q|default:'' }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+        
+        <div class="notes-grid">
+            {% if notes %}
+                {% for note in notes %}
+                <div class="note-card">
+                    <div class="note-header">
+                        <a href="{% url 'article_detail' slug=note.article.slug %}" class="note-article">
+                            <i class="fas fa-book"></i> {{ note.article.title|truncatewords:6 }}
+                        </a>
+                        <span class="note-date">{{ note.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    
+                    {% if note.selected_text %}
+                    <div class="note-quote">
+                        "{{ note.selected_text|truncatewords:30 }}"
+                    </div>
+                    {% endif %}
+                    
+                    <div class="note-content">
+                        {{ note.note }}
+                    </div>
+                    
+                    <div class="note-actions">
+                        <a href="{% url 'article_detail' slug=note.article.slug %}" title="View Article">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        <a href="{% url 'delete_note' note.id %}" class="delete" title="Delete Note"
+                           onclick="return confirm('Are you sure you want to delete this note?');">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="far fa-sticky-note"></i>
+                    <h3>No Notes Yet</h3>
+                    <p>Start reading and taking notes to see them here!</p>
+                    <a href="{% url 'articles' %}" class="btn btn-primary">Browse Articles</a>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}

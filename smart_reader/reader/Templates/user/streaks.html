@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Reading Streaks{% endblock %}
+
+{% block extra_css %}
+<style>
+    .streaks-header {
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+        color: white;
+    }
+    
+    .streaks-header-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .streaks-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .streaks-content {
+        max-width: 1000px;
+        margin: -2rem auto 0;
+        padding: 0 2rem 2rem;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .streak-main-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 3rem;
+        text-align: center;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .streak-fire {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    .streak-number {
+        font-size: 4rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .streak-label {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+    }
+    
+    .streak-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border);
+    }
+    
+    .streak-stat {
+        text-align: center;
+    }
+    
+    .streak-stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .streak-stat-label {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+    
+    .milestones-section {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        padding: 2rem;
+    }
+    
+    .milestones-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .milestones-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+    
+    .milestone-card {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        background: var(--bg-tertiary);
+        transition: all 0.3s;
+    }
+    
+    .milestone-card.achieved {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+        border: 2px solid var(--primary);
+    }
+    
+    .milestone-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .milestone-days {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+    
+    .milestone-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+    
+    .encouragement {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+        border-radius: var(--radius);
+        text-align: center;
+    }
+    
+    .encouragement p {
+        font-size: 1.125rem;
+        color: var(--text-primary);
+    }
+    
+    @media (max-width: 768px) {
+        .streak-stats { grid-template-columns: 1fr; gap: 1rem; }
+        .milestones-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="streaks-header">
+    <div class="streaks-header-content">
+        <h1><i class="fas fa-fire"></i> Reading Streaks</h1>
+        <p>Build consistent reading habits and watch your streak grow!</p>
+    </div>
+</section>
+
+<div class="streaks-content">
+    <div class="streak-main-card">
+        <div class="streak-fire">🔥</div>
+        <div class="streak-number">{{ streak.current_streak }}</div>
+        <div class="streak-label">Day{% if streak.current_streak != 1 %}s{% endif %} Current Streak</div>
+        
+        <div class="streak-stats">
+            <div class="streak-stat">
+                <div class="streak-stat-number">{{ streak.longest_streak }}</div>
+                <div class="streak-stat-label">Longest Streak</div>
+            </div>
+            <div class="streak-stat">
+                <div class="streak-stat-number">{{ streak.total_reading_days }}</div>
+                <div class="streak-stat-label">Total Reading Days</div>
+            </div>
+            <div class="streak-stat">
+                <div class="streak-stat-number">
+                    {% if streak.last_read_date %}
+                        {{ streak.last_read_date|date:"M d" }}
+                    {% else %}
+                        --
+                    {% endif %}
+                </div>
+                <div class="streak-stat-label">Last Read</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="milestones-section">
+        <h3 class="milestones-title">
+            <i class="fas fa-trophy" style="color: var(--accent);"></i>
+            Streak Milestones
+        </h3>
+        
+        <div class="milestones-grid">
+            <div class="milestone-card {% if streak.total_reading_days >= 7 %}achieved{% endif %}">
+                <div class="milestone-icon">🌟</div>
+                <div class="milestone-days">7 Days</div>
+                <div class="milestone-label">Week Warrior</div>
+            </div>
+            <div class="milestone-card {% if streak.total_reading_days >= 30 %}achieved{% endif %}">
+                <div class="milestone-icon">🥉</div>
+                <div class="milestone-days">30 Days</div>
+                <div class="milestone-label">Bronze Reader</div>
+            </div>
+            <div class="milestone-card {% if streak.total_reading_days >= 90 %}achieved{% endif %}">
+                <div class="milestone-icon">🥈</div>
+                <div class="milestone-days">90 Days</div>
+                <div class="milestone-label">Silver Scholar</div>
+            </div>
+            <div class="milestone-card {% if streak.total_reading_days >= 150 %}achieved{% endif %}">
+                <div class="milestone-icon">🥇</div>
+                <div class="milestone-days">150 Days</div>
+                <div class="milestone-label">Gold Master</div>
+            </div>
+        </div>
+        
+        <div class="encouragement">
+            {% if streak.current_streak == 0 %}
+            <p>📚 Start reading today to begin your streak!</p>
+            {% elif streak.current_streak < 7 %}
+            <p>🔥 Keep going! Only {{ 7|add:"-"|add:streak.current_streak }} more day{% if 7|add:"-"|add:streak.current_streak != 1 %}s{% endif %} to reach your first milestone!</p>
+            {% elif streak.current_streak < 30 %}
+            <p>🌟 Amazing! You're on fire! Keep reading to reach 30 days!</p>
+            {% elif streak.current_streak < 90 %}
+            <p>🥉 Incredible dedication! You're on your way to Silver Scholar!</p>
+            {% elif streak.current_streak < 150 %}
+            <p>🥈 Outstanding! Gold Master status is within reach!</p>
+            {% else %}
+            <p>🏆 LEGENDARY! You're a true reading champion!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

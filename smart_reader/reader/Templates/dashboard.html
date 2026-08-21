@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+
+<h2>User Dashboard</h2>
+
+<p><b>Total Articles Read:</b> {{ total_articles }}</p>
+
+<p><b>Total Time Spent Reading:</b> {{ total_time }} seconds</p>
+
+<p>
+<b>Progress Percentage:</b>
+{{ total_articles|floatformat:2 }} %
+</p>
+
+<a href="/articles/">Back to Articles</a>
+
+</body>
+</html>
